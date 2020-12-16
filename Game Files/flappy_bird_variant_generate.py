@@ -29,6 +29,7 @@ STAT_FONT = pygame.font.SysFont("comicsans", 50)
 END_FONT = pygame.font.SysFont("comicsans", 70)
 DRAW_LINES = False
 
+#Game Variants : change these variables to change the game difficulty
 GAP = 250 #250
 SEPARATION =  100#SEPARATION <-100,150> -100
 VELOCITY = 40 #VELOCITY <20,60>
@@ -37,28 +38,25 @@ JUMP_VELOCITY = -12 #JUMP_VELOCITY <0,-15>
 GRAVITY = 3  #GRAVITY <0,3>
 WIN_HEIGHT = 800 #WORLD_HEIGHT <650,950>
 FLOOR = math.floor(730 * WIN_HEIGHT / 800)
-
-
 WIN = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
 pygame.display.set_caption("Flappy Bird")
-
 pipe_img = pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","pipe.png")).convert_alpha())
 bg_img = pygame.transform.scale(pygame.image.load(os.path.join("imgs","bg.png")).convert_alpha(), (600, 900))
 bird_images = [pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","bird" + str(x) + ".png"))) for x in range(1,4)]
 base_img = pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","base.png")).convert_alpha())
-address = ('localhost', 6005)     # family is deduced to be 'AF_INET'
-listener = Listener(address, authkey=b'secret password')
+address = ('localhost', 6006)     # family is deduced to be 'AF_INET' 
+listener = Listener(address, authkey=b'secret password') # start listening to port 6006, port number should be same as in *parameter_update.py*
 conn = listener.accept()
 gen = 0
-p = 0
-l = 0
+population = 0
 
-def trainingResponse(params = None,fitness=None,score=None,gen=None):
+def trainingResponse(params = None,fitness=None,score=None,gen=None,po=None):
     if(params!=None):
         conn.send(str(params)+"|"+str(gen)+"|"+str(fitness)+"|"+str(score))
+    elif (po!=None):
+        conn.send(po)
     else:
         conn.send(None)
-
 
 
 class Bird:
@@ -69,7 +67,6 @@ class Bird:
     IMGS = bird_images
     ROT_VEL = 20
     ANIMATION_TIME = 5
-
     def __init__(self, x, y):
         """
         Initialize the object
@@ -341,8 +338,7 @@ def eval_genomes(genomes, config):
     birds and sets their fitness based on the distance they
     reach in the game.
     """
-    global WIN, gen ,l
-    l+=1
+    global WIN, gen
     win = WIN
     gen += 1
 
@@ -366,6 +362,7 @@ def eval_genomes(genomes, config):
     clock = pygame.time.Clock()
 
     run = True
+    last_time = 0
     while run and len(birds) > 0:
         clock.tick(30)
 
@@ -384,13 +381,14 @@ def eval_genomes(genomes, config):
         for x, bird in enumerate(birds):  # give each bird a fitness of 0.1 for each frame it stays alive
             ge[x].fitness += 0.1
             bird.move()
-
             # send bird location, top pipe location and bottom pipe location and determine from network whether to jump or not
             output = nets[birds.index(bird)].activate((bird.y, abs(bird.y - pipes[pipe_ind].height), abs(bird.y - pipes[pipe_ind].bottom)))
-
-            if output[0] > 0.5:  # we use a tanh activation function so result will be between -1 and 1. if over 0.5 jump
-                bird.jump()
-
+            current_time = time.time()
+            if (output[0] > 0.5):  # we use a tanh activation function so result will be between -1 and 1. if over 0.5 jump
+                if(current_time-last_time>=0.25):#if time gap btw taps is at least 250ms else output  is discarded and bird won't jump
+                    bird.jump()
+                    print(current_time - last_time)
+                    last_time = current_time                   
         base.move()
 
         rem = []
@@ -432,16 +430,15 @@ def eval_genomes(genomes, config):
         
         # break if score gets large enough
         if (score > 100):
-            print(l,gen,score,ge[0].fitness,gen)
+            print(gen,score,ge[0].fitness,gen)
             t = time.strftime("%H:%M:%S", time.localtime())
-            pickle.dump(ge[0],open("best.pickle"+t, "wb"))
-            trainingResponse([GAP,SEPARATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,WIN_HEIGHT,t],score,ge[0].fitness,p.generation)
-            p.stop()
+            pickle.dump(ge[0],open(t+"best.pickle", "wb"))
+            trainingResponse([GAP,SEPARATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,WIN_HEIGHT,t],score,ge[0].fitness,population.generation)
+            population.stop()
             break
 
 def run(config_file):
-    global gen , p , l
-    l =0
+    global gen , population
     gen = 0
     """
     runs the NEAT algorithm to train a neural network to play flappy bird.
@@ -453,52 +450,45 @@ def run(config_file):
                          config_file)
 
     # Create the population, which is the top-level object for a NEAT run.
-    p = neat.Population(config)
-
+    population = neat.Population(config)
 
 
     # Add a stdout reporter to show progress in the terminal.
-    p.add_reporter(neat.StdOutReporter(True))
+    population.add_reporter(neat.StdOutReporter(True))
     stats = neat.StatisticsReporter()
-    p.add_reporter(stats)
+    population.add_reporter(stats)
     #p.add_reporter(neat.Checkpointer(5))
 
-    # Run for up to 50 generations.
-    
-    winner = p.run(eval_genomes, 50)
+    # Run for up to 50 generations, in case of not providing genration are generated till given fitness is achieved
+    winner = population.run(eval_genomes, 50)
     with open("best.pickle", "wb") as f:
         pickle.dump(winner, f)
     f.close()
         
     # show final stats
     print('\nBest genome:\n{!s}'.format(winner))
-    if(p.reached_limit):
-        trainingResponse()
-
-
+    if(population.reached_limit):
+        trainingResponse(None,None,None,None)
 
 def updateValues(config_path):
     global WIN,GAP,SEPARATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,WIN_HEIGHT
     print (b'connection accepted from', listener.last_accepted)
-    # thread = threading.Thread(target=run,args=[config_path])
+    # listens for parameter updates from *parameter_update.py*
     while True:
-        msg = conn.recv()
-       
-        # temp = [GAP,SEPARATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,WIN_HEIGHT]
-        # for i in range(len(msg)):
-        #     if (msg[i]!='None'):
-        #         temp[i] = int(msg[i])
-        GAP,SEPARATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,WIN_HEIGHT = msg
-        print([GAP,SEPARATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,WIN_HEIGHT],msg)
-        run(config_path)         
-      
-        
+        try:
 
-
+            msg = conn.recv() # parameter updates from *parameter_update.py*
+            GAP,SEPARATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,WIN_HEIGHT = msg
+            run(config_path)         
+        except EOFError as e:
+            print("client disconnected")
+            exit_Training()
+            break
         
-def signal_handler(signal, frame):
-    print('Game closed')
+def exit_Training():
+    print('Training  closed')
     listener.close()
+    conn.close()
     sys.exit(0)
 
 if __name__ == '__main__':

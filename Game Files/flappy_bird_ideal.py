@@ -24,7 +24,7 @@ bird_images = [pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","b
 base_img = pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","base.png")).convert_alpha())
 
 gen = 0
-
+score = 0
 class Bird:
     """
     Bird class representing the flappy bird
@@ -305,7 +305,7 @@ def game(genomes, config):
     birds and sets their fitness based on the distance they
     reach in the game.
     """
-    global WIN, gen
+    global WIN, gen,score
     win = WIN
     gen += 1
 
