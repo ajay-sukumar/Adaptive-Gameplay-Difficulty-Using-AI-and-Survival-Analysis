@@ -1,3 +1,11 @@
+
+"""
+    1)simulate game variant received from parameter_update.py and check if it is playable with click limit (playable only if it reach score:100 or fitness:1800)
+    2)After checking playability necessary files are sent to game parameter_update.py
+    3)If playable the data is saved to respective files else data is discarded.
+    4)Then new variant is received. 
+    follow 1,2,3,4 until required number of playable variants are generated.
+"""
 import pygame
 import random
 import os
@@ -5,24 +13,44 @@ import time
 import neat
 import visualize
 import pickle
+import threading
+import signal
+import sys
+import math
+from multiprocessing.connection import Listener
+import multiprocessing
+
 pygame.font.init()  # init font
 
 WIN_WIDTH = 600
 WIN_HEIGHT = 800
 FLOOR = 730
+GAP = 250 #250
+SEPERATION =  100#SEPERATION <0,200>
+VELOCITY = 40 #VELOCITY <20,60>
+PIPE_VELOCITY  = 6 #PIPE_VELOCITY <4,13>
+JUMP_VELOCITY = -12 #JUMP_VELOCITY <-5,-12>
+GRAVITY = 3  #GRAVITY <2,3>
+
+FLOOR = math.floor(730 * WIN_HEIGHT / 800)
+
 STAT_FONT = pygame.font.SysFont("comicsans", 50)
 END_FONT = pygame.font.SysFont("comicsans", 70)
 DRAW_LINES = False
-
 WIN = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
 pygame.display.set_caption("Flappy Bird")
-
+reached_limit = True
 pipe_img = pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","pipe.png")).convert_alpha())
 bg_img = pygame.transform.scale(pygame.image.load(os.path.join("imgs","bg.png")).convert_alpha(), (600, 900))
 bird_images = [pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","bird" + str(x) + ".png"))) for x in range(1,4)]
 base_img = pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","base.png")).convert_alpha())
-
+address = ('localhost', 6005)     # family is deduced to be 'AF_INET'
+listener = Listener(address, authkey=b'secret password')
+conn = listener.accept()
 gen = 0
+
+def trainingResponse(params = None):
+    conn.send(params)
 
 class Bird:
     """
@@ -54,7 +82,7 @@ class Bird:
         make the bird jump
         :return: None
         """
-        self.vel = -10.5
+        self.vel = JUMP_VELOCITY #JUMP_VELOCITY
         self.tick_count = 0
         self.height = self.y
 
@@ -66,8 +94,8 @@ class Bird:
         self.tick_count += 1
 
         # for downward acceleration
-        displacement = self.vel*(self.tick_count) + 0.5*(3)*(self.tick_count)**2  # calculate displacement
-
+        displacement = self.vel*(self.tick_count) + 0.5*(GRAVITY)*(self.tick_count)**2  # calculate displacement
+       
         # terminal velocity
         if displacement >= 16:
             displacement = (displacement/abs(displacement)) * 16
@@ -126,8 +154,6 @@ class Pipe():
     """
     represents a pipe object
     """
-    GAP = 250
-    VEL = 5
 
     def __init__(self, x):
         """
@@ -136,7 +162,8 @@ class Pipe():
         :param y: int
         :return" None
         """
-        self.x = x
+        self.VEL = PIPE_VELOCITY
+        self.x = x+SEPERATION -100
         self.height = 0
 
         # where the top and bottom of the pipe is
@@ -155,9 +182,9 @@ class Pipe():
         set the height of the pipe, from the top of the screen
         :return: None
         """
-        self.height = random.randrange(50, 450)
+        self.height = random.randrange(90, 410)
         self.top = self.height - self.PIPE_TOP.get_height()
-        self.bottom = self.height + self.GAP
+        self.bottom = self.height + GAP
 
     def move(self):
         """
@@ -165,6 +192,7 @@ class Pipe():
         :return: None
         """
         self.x -= self.VEL
+     
 
     def draw(self, win):
         """
@@ -298,13 +326,13 @@ def draw_window(win, birds, pipes, base, score, gen, pipe_ind):
     pygame.display.update()
 
 
-def eval_genomes(genomes, config):
+def eval_genomes(genomes, config,pickle_file):
     """
     runs the simulation of the current population of
     birds and sets their fitness based on the distance they
     reach in the game.
     """
-    global WIN, gen
+    global WIN, gen ,reached_limit
     win = WIN
     gen += 1
 
@@ -328,6 +356,7 @@ def eval_genomes(genomes, config):
     clock = pygame.time.Clock()
 
     run = True
+    start = time.time()
     while run and len(birds) > 0:
         clock.tick(30)
 
@@ -351,7 +380,10 @@ def eval_genomes(genomes, config):
             output = nets[birds.index(bird)].activate((bird.y, abs(bird.y - pipes[pipe_ind].height), abs(bird.y - pipes[pipe_ind].bottom)))
 
             if output[0] > 0.5:  # we use a tanh activation function so result will be between -1 and 1. if over 0.5 jump
-                bird.jump()
+                if time.time()-start>0.125:
+                    start = time.time()
+                    bird.jump()
+
 
         base.move()
 
@@ -391,14 +423,25 @@ def eval_genomes(genomes, config):
                 birds.pop(birds.index(bird))
 
         draw_window(WIN, birds, pipes, base, score, gen, pipe_ind)
-
+        
         # break if score gets large enough
-        '''if score > 20:
-            pickle.dump(nets[0],open("best.pickle", "wb"))
-            break'''
+        if (score > 100):
+            print(gen,score,ge[0].fitness,gen)
+            t = time.strftime("%H%M%S", time.localtime())
+            file = pickle_file + ".pickle"
+            path = "Verified_Pickles/" + file
+            with open(path, "wb") as f:
+                pickle.dump(ge[0], f)
+            trainingResponse([[GAP,SEPERATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,t],file,score,ge[0].fitness])
+            reached_limit = False
+            break
+    return score
 
+def run(config_file,pickle_file):
 
-def run(config_file):
+    global gen  ,reached_limit
+    reached_limit = True
+    gen = 0
     """
     runs the NEAT algorithm to train a neural network to play flappy bird.
     :param config_file: location of config file
@@ -408,26 +451,65 @@ def run(config_file):
                          neat.DefaultSpeciesSet, neat.DefaultStagnation,
                          config_file)
 
+    genome_path = './Pickles/'+ pickle_file
+    with open(genome_path, "rb") as f:
+        genome = pickle.load(f)
+    genomes = [(1, genome)]
     # Create the population, which is the top-level object for a NEAT run.
-    p = neat.Population(config)
+    score = eval_genomes(genomes,config,pickle_file)
+    print("score: ",score)
 
     # Add a stdout reporter to show progress in the terminal.
-    p.add_reporter(neat.StdOutReporter(True))
-    stats = neat.StatisticsReporter()
-    p.add_reporter(stats)
+    # p.add_reporter(neat.StdOutReporter(True))
+    # stats = neat.StatisticsReporter()
+    # p.add_reporter(stats)
     #p.add_reporter(neat.Checkpointer(5))
 
     # Run for up to 50 generations.
-    winner = p.run(eval_genomes, 50)
-
+    
+    # winner = p.run(eval_genomes, 50)
+    # with open("Verified.pickle", "wb") as f:
+    #     pickle.dump(winner, f)
+    f.close()
+        
     # show final stats
-    print('\nBest genome:\n{!s}'.format(winner))
+    if(reached_limit):
+        trainingResponse([score])
 
+def exit_Training():
+    print('Training  closed')
+    listener.close()
+    conn.close()
+    sys.exit(0)
+
+def updateValues(config_path):
+    global WIN,GAP,SEPERATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY
+    print (b'connection accepted from', listener.last_accepted)
+    while True:
+        try:
+            msg = conn.recv()
+            parameters = msg[0][1:-1].split(', ')
+            parameters = [int(x) for x in parameters]
+            GAP,SEPERATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,HEIGHT = parameters
+            pickle_file=msg[1]
+            print("Received new varaint",[GAP,SEPERATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY],msg)
+            run(config_path,pickle_file) 
+        except EOFError as e:
+            print("client disconnected")
+            exit_Training()
+            break      
+        
+def signal_handler(signal, frame):
+    print('Game closed')
+    listener.close()
+    sys.exit(0)
 
 if __name__ == '__main__':
-    # Determine path to configuration file. This path manipulation is
-    # here so that the script will run successfully regardless of the
-    # current working directory.
+    """
+    Determine path to configuration file. This path manipulation is
+    here so that the script will run successfully regardless of the
+    current working directory.
+    """
     local_dir = os.path.dirname(__file__)
     config_path = os.path.join(local_dir, 'config-feedforward.txt')
-    run(config_path)
+    updateValues(config_path)

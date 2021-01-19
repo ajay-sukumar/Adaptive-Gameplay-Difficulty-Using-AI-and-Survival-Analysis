@@ -1,10 +1,10 @@
-"""
-The classic game of flappy bird. Make with python
-and pygame. Features pixel perfect collision using masks :o
 
-Date Modified:  Jul 30, 2019
-Author: Tech With Tim
-Estimated Work Time: 5 hours (1 just for that damn collision)
+"""
+    1)simulate game variant received from parameter_update.py and check if it is playable.(Playable only if it reach score:100 or fitness:1800)
+    2)After checking playability necessary files are sent to game parameter_update.py
+    3)If playable the data is saved to respective files else data is discarded.
+    4)Then new variant is received. 
+    follow 1,2,3,4 until required number of playable variants are generated.
 """
 import pygame
 import random
@@ -19,7 +19,7 @@ import sys
 import math
 from multiprocessing.connection import Listener
 import multiprocessing
-
+import matplotlib.pyplot as plt 
 pygame.font.init()  # init font
 
 WIN_WIDTH = 600
@@ -29,12 +29,12 @@ STAT_FONT = pygame.font.SysFont("comicsans", 50)
 END_FONT = pygame.font.SysFont("comicsans", 70)
 DRAW_LINES = False
 
-#Game Variants : change these variables to change the game difficulty
-GAP = 250 #250
-SEPARATION =  100#SEPARATION <-100,150> -100
+#Initializing Game Variants : change these variables to change the game difficulty
+GAP = 250 #SEPARATION <150,300> 250
+SEPARATION =  100#SEPARATION <0,200> 100
 VELOCITY = 40 #VELOCITY <20,60>
-PIPE_VELOCITY  = 6 #PIPE_VELOCITY <3,15> 5 prefred
-JUMP_VELOCITY = -12 #JUMP_VELOCITY <0,-15>
+PIPE_VELOCITY  = 6 #PIPE_VELOCITY <4,13> 5 
+JUMP_VELOCITY = -12 #JUMP_VELOCITY <-5,-12> -10.5
 GRAVITY = 3  #GRAVITY <0,3>
 WIN_HEIGHT = 800 #WORLD_HEIGHT <650,950>
 FLOOR = math.floor(730 * WIN_HEIGHT / 800)
@@ -50,13 +50,17 @@ conn = listener.accept()
 gen = 0
 population = 0
 
-def trainingResponse(params = None,fitness=None,score=None,gen=None,po=None):
-    if(params!=None):
-        conn.send(str(params)+"|"+str(gen)+"|"+str(fitness)+"|"+str(score))
-    elif (po!=None):
-        conn.send(po)
-    else:
-        conn.send(None)
+
+fitness_list=[]
+gen_list=[]
+population_list=[]
+score_list=[]
+
+def trainingResponse(params = None):
+    """
+    sending response to client "flappy_bird_variant_generate"
+    """
+    conn.send(params)
 
 
 class Bird:
@@ -161,7 +165,7 @@ class Pipe():
     represents a pipe object
     """
    
-    VEL = PIPE_VELOCITY
+    
 
     def __init__(self, x):
         """
@@ -170,6 +174,7 @@ class Pipe():
         :param y: int
         :return" None
         """
+        self.VEL = PIPE_VELOCITY
         self.x = x+SEPARATION -100
         self.height = 0
 
@@ -341,10 +346,11 @@ def eval_genomes(genomes, config):
     global WIN, gen
     win = WIN
     gen += 1
-
-    # start by creating lists holding the genome itself, the
-    # neural network associated with the genome and the
-    # bird object that uses that network to play
+    """
+    start by creating lists holding the genome itself, the
+    neural network associated with the genome and the
+    bird object that uses that network to play
+    """
     nets = []
     birds = []
     ge = []
@@ -362,7 +368,6 @@ def eval_genomes(genomes, config):
     clock = pygame.time.Clock()
 
     run = True
-    last_time = 0
     while run and len(birds) > 0:
         clock.tick(30)
 
@@ -383,12 +388,10 @@ def eval_genomes(genomes, config):
             bird.move()
             # send bird location, top pipe location and bottom pipe location and determine from network whether to jump or not
             output = nets[birds.index(bird)].activate((bird.y, abs(bird.y - pipes[pipe_ind].height), abs(bird.y - pipes[pipe_ind].bottom)))
-            current_time = time.time()
-            if (output[0] > 0.5):  # we use a tanh activation function so result will be between -1 and 1. if over 0.5 jump
-                if(current_time-last_time>=0.25):#if time gap btw taps is at least 250ms else output  is discarded and bird won't jump
-                    bird.jump()
-                    print(current_time - last_time)
-                    last_time = current_time                   
+            if (output[0] > 0.5):  # we use a tanh activation function so result will be between -1 and 1. if over 0.5 jump  
+                bird.jump()                   
+            
+                
         base.move()
 
         rem = []
@@ -413,9 +416,21 @@ def eval_genomes(genomes, config):
         if add_pipe:
             score += 1
             # can add this line to give more reward for passing through a pipe (not required)
+            avg_fitness=0
             for genome in ge:
                 genome.fitness += 5
+                avg_fitness+=(genome.fitness)
+            
+            
+
             pipes.append(Pipe(WIN_WIDTH))
+            if(len(ge)!=0):
+                fitness_list.append(avg_fitness/len(ge))
+            else:
+                fitness_list.append(0)
+            gen_list.append(population.generation)
+            population_list.append(len(ge))
+            score_list.append(score)
 
         for r in rem:
             pipes.remove(r)
@@ -431,15 +446,23 @@ def eval_genomes(genomes, config):
         # break if score gets large enough
         if (score > 100):
             print(gen,score,ge[0].fitness,gen)
-            t = time.strftime("%H:%M:%S", time.localtime())
-            pickle.dump(ge[0],open(t+"best.pickle", "wb"))
-            trainingResponse([GAP,SEPARATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,WIN_HEIGHT,t],score,ge[0].fitness,population.generation)
+            t = str(int(time.time()))
+            with open('Pickles/'+t+".pickle", "wb") as f:
+                 pickle.dump(ge[0],f)
+            f.close()
+            trainingResponse([[GAP,SEPARATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,WIN_HEIGHT],t+".pickle",score,ge[0].fitness,population.generation])
+            plotGraph('Pickles/'+t+".plot")
             population.stop()
             break
 
 def run(config_file):
-    global gen , population
+    global gen , population ,fitness_list,gen_list,population_list,score_list
     gen = 0
+    fitness_list=[]
+    gen_list=[]
+    population_list=[]
+    score_list=[]
+
     """
     runs the NEAT algorithm to train a neural network to play flappy bird.
     :param config_file: location of config file
@@ -458,17 +481,26 @@ def run(config_file):
     stats = neat.StatisticsReporter()
     population.add_reporter(stats)
     #p.add_reporter(neat.Checkpointer(5))
+    winner = population.run(eval_genomes, 50) # Run for up to 50 generations, in case of not providing genration are generated till given fitness is achieved
 
-    # Run for up to 50 generations, in case of not providing genration are generated till given fitness is achieved
-    winner = population.run(eval_genomes, 50)
-    with open("best.pickle", "wb") as f:
-        pickle.dump(winner, f)
-    f.close()
-        
-    # show final stats
-    print('\nBest genome:\n{!s}'.format(winner))
-    if(population.reached_limit):
-        trainingResponse(None,None,None,None)
+    # print('\nBest genome:\n{!s}'.format(winner))    show final stats
+
+    if(population.reached_limit): #if fitness or score not achieved
+        trainingResponse(None)
+
+
+def plotGraph(pickle_name):
+    fig,ax = plt.subplots()
+    scores = [i for i in range(len(score_list))]
+    plt.plot(scores, fitness_list, label = "fitness") 
+    plt.plot(scores, gen_list, label = "generation") 
+    plt.plot(scores, score_list, label = "score") 
+    plt.plot(scores, population_list, label = "population") 
+    plt.xlabel('jumps') 
+    plt.ylabel('fit/gen/pop/score') 
+    plt.legend() 
+    pickle.dump(fig, open(pickle_name, 'wb'))
+
 
 def updateValues(config_path):
     global WIN,GAP,SEPARATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,WIN_HEIGHT
@@ -476,7 +508,6 @@ def updateValues(config_path):
     # listens for parameter updates from *parameter_update.py*
     while True:
         try:
-
             msg = conn.recv() # parameter updates from *parameter_update.py*
             GAP,SEPARATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,WIN_HEIGHT = msg
             run(config_path)         
@@ -492,9 +523,11 @@ def exit_Training():
     sys.exit(0)
 
 if __name__ == '__main__':
-    # Determine path to configuration file. This path manipulation is
-    # here so that the script will run successfully regardless of the
-    # current working directory.
+    """
+    Determine path to configuration file. This path manipulation is
+    here so that the script will run successfully regardless of the
+    current working directory.
+    """
     local_dir = os.path.dirname(__file__)
     config_path = os.path.join(local_dir, 'config-feedforward.txt')
     updateValues(config_path)
