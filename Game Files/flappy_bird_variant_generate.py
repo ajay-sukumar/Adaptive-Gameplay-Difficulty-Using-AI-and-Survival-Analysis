@@ -30,11 +30,19 @@ END_FONT = pygame.font.SysFont("comicsans", 70)
 DRAW_LINES = False
 
 #Initializing Game Variants : change these variables to change the game difficulty
+<<<<<<< HEAD
 GAP = 250 #SEPARATION <150,250> 250
 SEPARATION =  100#SEPARATION <-100,150> -100
 VELOCITY = 40 #VELOCITY <20,60>
 PIPE_VELOCITY  = 6 #PIPE_VELOCITY <3,15> 5 
 JUMP_VELOCITY = -12 #JUMP_VELOCITY <0,-15>
+=======
+GAP = 250 #SEPARATION <150,300> 250
+SEPARATION =  100#SEPARATION <0,200> 100
+VELOCITY = 40 #VELOCITY <20,60>
+PIPE_VELOCITY  = 6 #PIPE_VELOCITY <4,13> 5 
+JUMP_VELOCITY = -12 #JUMP_VELOCITY <-5,-12> -10.5
+>>>>>>> 936b8d4348c5bac759472f0301ec813e273a6006
 GRAVITY = 3  #GRAVITY <0,3>
 WIN_HEIGHT = 800 #WORLD_HEIGHT <650,950>
 FLOOR = math.floor(730 * WIN_HEIGHT / 800)
@@ -56,7 +64,10 @@ gen_list=[]
 population_list=[]
 score_list=[]
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 936b8d4348c5bac759472f0301ec813e273a6006
 def trainingResponse(params = None):
     """
     sending response to client "flappy_bird_variant_generate"
@@ -166,7 +177,7 @@ class Pipe():
     represents a pipe object
     """
    
-    VEL = PIPE_VELOCITY
+    
 
     def __init__(self, x):
         """
@@ -175,6 +186,7 @@ class Pipe():
         :param y: int
         :return" None
         """
+        self.VEL = PIPE_VELOCITY
         self.x = x+SEPARATION -100
         self.height = 0
 
@@ -368,7 +380,6 @@ def eval_genomes(genomes, config):
     clock = pygame.time.Clock()
 
     run = True
-    last_time = 0
     while run and len(birds) > 0:
         clock.tick(30)
 
@@ -388,12 +399,18 @@ def eval_genomes(genomes, config):
             ge[x].fitness += 0.1
             bird.move()
             # send bird location, top pipe location and bottom pipe location and determine from network whether to jump or not
+<<<<<<< HEAD
             current_time = time.time()
             if(current_time-last_time>=0):#if time gap btw taps is at least 250ms else output  is discarded and bird won't jump
                 output = nets[birds.index(bird)].activate((bird.y, abs(bird.y - pipes[pipe_ind].height), abs(bird.y - pipes[pipe_ind].bottom)))
                 if (output[0] > 0.75):  # we use a tanh activation function so result will be between -1 and 1. if over 0.5 jump  
                     bird.jump()
                     last_time = current_time                   
+=======
+            output = nets[birds.index(bird)].activate((bird.y, abs(bird.y - pipes[pipe_ind].height), abs(bird.y - pipes[pipe_ind].bottom)))
+            if (output[0] > 0.5):  # we use a tanh activation function so result will be between -1 and 1. if over 0.5 jump  
+                bird.jump()                   
+>>>>>>> 936b8d4348c5bac759472f0301ec813e273a6006
             
                 
         base.move()
@@ -493,7 +510,11 @@ def run(config_file):
         trainingResponse(None)
 
 
+<<<<<<< HEAD
 def plotGraph(pickel_name):
+=======
+def plotGraph(pickle_name):
+>>>>>>> 936b8d4348c5bac759472f0301ec813e273a6006
     fig,ax = plt.subplots()
     scores = [i for i in range(len(score_list))]
     plt.plot(scores, fitness_list, label = "fitness") 
@@ -503,7 +524,11 @@ def plotGraph(pickel_name):
     plt.xlabel('jumps') 
     plt.ylabel('fit/gen/pop/score') 
     plt.legend() 
+<<<<<<< HEAD
     pickle.dump(fig, open(pickel_name, 'wb'))
+=======
+    pickle.dump(fig, open(pickle_name, 'wb'))
+>>>>>>> 936b8d4348c5bac759472f0301ec813e273a6006
 
 
 def updateValues(config_path):
