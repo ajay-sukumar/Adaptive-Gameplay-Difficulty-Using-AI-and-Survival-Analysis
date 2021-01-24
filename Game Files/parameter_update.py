@@ -28,9 +28,7 @@ f2 = NONE
 f_writer = NONE
 f_reader = NONE
 ideal_sim_mode = True #decides whether to simulate variants or ganrate variants.
-port = 6006
 if(ideal_sim_mode):
-    f1 = open('trained_verified_variants.csv',mode='a')
     f_writer = csv.writer(f1,delimiter=',', lineterminator = '\n') # file to save variants
     f2 = open('trained_variants.csv',mode='r')
     f_reader = csv.reader(f2,delimiter=',')
@@ -44,7 +42,7 @@ while(True):
         address = ('localhost', port)
         conn = Client(address, authkey=b'secret password')
         i = 0
-        variant_limit = 10 # number of variants to be generated
+        variant_limit = 25 # number of variants to be generated
         while(ideal_sim_mode or  i<variant_limit):
             # [GAP,SEPARATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,WIN_HEIGHT] variants are genrated and send to the port
             if(ideal_sim_mode):
@@ -57,7 +55,7 @@ while(True):
             if(msg==None):
                 print("Failed") # variants sent are not playable for ai agent
             elif(len(msg)==1):
-                print("Failed",msg)
+                print("Failed",msg) # print score
                 f_writer.writerow("Failed"+str(msg[0]))
             else:
                 print(msg)  # variants sent are playable for ai agent

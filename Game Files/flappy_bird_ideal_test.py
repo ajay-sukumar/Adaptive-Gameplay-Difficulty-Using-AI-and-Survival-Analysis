@@ -1,6 +1,5 @@
-
 """
-    1)simulate game variant received from parameter_update.py and check if it is playable.(Playable only if it reach score:100 or fitness:1800)
+    1)simulate game variant received from parameter_update.py and check if it is playable with click limit (playable only if it reach score:100 or fitness:1800)
     2)After checking playability necessary files are sent to game parameter_update.py
     3)If playable the data is saved to respective files else data is discarded.
     4)Then new variant is received. 
@@ -19,51 +18,38 @@ import sys
 import math
 from multiprocessing.connection import Listener
 import multiprocessing
-import matplotlib.pyplot as plt 
+
 pygame.font.init()  # init font
 
 WIN_WIDTH = 600
 WIN_HEIGHT = 800
 FLOOR = 730
+GAP = 250 #250
+SEPERATION =  100#SEPERATION <0,200>
+VELOCITY = 40 #VELOCITY <20,60>
+PIPE_VELOCITY  = 6 #PIPE_VELOCITY <4,13>
+JUMP_VELOCITY = -12 #JUMP_VELOCITY <-5,-12>
+GRAVITY = 3  #GRAVITY <2,3>
+
+FLOOR = math.floor(730 * WIN_HEIGHT / 800)
+
 STAT_FONT = pygame.font.SysFont("comicsans", 50)
 END_FONT = pygame.font.SysFont("comicsans", 70)
 DRAW_LINES = False
-
-#Initializing Game Variants : change these variables to change the game difficulty
-
-GAP = 250 #SEPARATION <150,250> 250
-SEPARATION =  100#SEPARATION <-100,150> -100
-VELOCITY = 40 #VELOCITY <20,60>
-PIPE_VELOCITY  = 6 #PIPE_VELOCITY <3,15> 5 
-JUMP_VELOCITY = -12 #JUMP_VELOCITY <0,-15>
-
-GRAVITY = 3  #GRAVITY <0,3>
-WIN_HEIGHT = 800 #WORLD_HEIGHT <650,950>
-FLOOR = math.floor(730 * WIN_HEIGHT / 800)
 WIN = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
 pygame.display.set_caption("Flappy Bird")
+reached_limit = True
 pipe_img = pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","pipe.png")).convert_alpha())
 bg_img = pygame.transform.scale(pygame.image.load(os.path.join("imgs","bg.png")).convert_alpha(), (600, 900))
 bird_images = [pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","bird" + str(x) + ".png"))) for x in range(1,4)]
 base_img = pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","base.png")).convert_alpha())
-address = ('localhost', 6006)     # family is deduced to be 'AF_INET' 
-listener = Listener(address, authkey=b'secret password') # start listening to port 6006, port number should be same as in *parameter_update.py*
+address = ('localhost', 6005)     # family is deduced to be 'AF_INET'
+listener = Listener(address, authkey=b'secret password')
 conn = listener.accept()
 gen = 0
-population = 0
-
-
-fitness_list=[]
-gen_list=[]
-population_list=[]
-score_list=[]
 
 def trainingResponse(params = None):
-    """
-    sending response to client "flappy_bird_variant_generate"
-    """
     conn.send(params)
-
 
 class Bird:
     """
@@ -73,6 +59,7 @@ class Bird:
     IMGS = bird_images
     ROT_VEL = 20
     ANIMATION_TIME = 5
+
     def __init__(self, x, y):
         """
         Initialize the object
@@ -107,7 +94,7 @@ class Bird:
 
         # for downward acceleration
         displacement = self.vel*(self.tick_count) + 0.5*(GRAVITY)*(self.tick_count)**2  # calculate displacement
-
+       
         # terminal velocity
         if displacement >= 16:
             displacement = (displacement/abs(displacement)) * 16
@@ -166,8 +153,6 @@ class Pipe():
     """
     represents a pipe object
     """
-   
-    
 
     def __init__(self, x):
         """
@@ -177,7 +162,7 @@ class Pipe():
         :return" None
         """
         self.VEL = PIPE_VELOCITY
-        self.x = x+SEPARATION -100
+        self.x = x+SEPERATION -100
         self.height = 0
 
         # where the top and bottom of the pipe is
@@ -206,6 +191,7 @@ class Pipe():
         :return: None
         """
         self.x -= self.VEL
+     
 
     def draw(self, win):
         """
@@ -339,20 +325,19 @@ def draw_window(win, birds, pipes, base, score, gen, pipe_ind):
     pygame.display.update()
 
 
-def eval_genomes(genomes, config):
+def eval_genomes(genomes, config,pickle_file):
     """
     runs the simulation of the current population of
     birds and sets their fitness based on the distance they
     reach in the game.
     """
-    global WIN, gen
+    global WIN, gen ,reached_limit
     win = WIN
     gen += 1
-    """
-    start by creating lists holding the genome itself, the
-    neural network associated with the genome and the
-    bird object that uses that network to play
-    """
+
+    # start by creating lists holding the genome itself, the
+    # neural network associated with the genome and the
+    # bird object that uses that network to play
     nets = []
     birds = []
     ge = []
@@ -370,6 +355,7 @@ def eval_genomes(genomes, config):
     clock = pygame.time.Clock()
 
     run = True
+    start = time.time()
     while run and len(birds) > 0:
         clock.tick(30)
 
@@ -388,20 +374,16 @@ def eval_genomes(genomes, config):
         for x, bird in enumerate(birds):  # give each bird a fitness of 0.1 for each frame it stays alive
             ge[x].fitness += 0.1
             bird.move()
-#             # send bird location, top pipe location and bottom pipe location and determine from network whether to jump or not
-# <<<<<<< HEAD
-#             current_time = time.time()
-#             if(current_time-last_time>=0):#if time gap btw taps is at least 250ms else output  is discarded and bird won't jump
-#                 output = nets[birds.index(bird)].activate((bird.y, abs(bird.y - pipes[pipe_ind].height), abs(bird.y - pipes[pipe_ind].bottom)))
-#                 if (output[0] > 0.75):  # we use a tanh activation function so result will be between -1 and 1. if over 0.5 jump  
-#                     bird.jump()
-#                     last_time = current_time                   
-# =======
+
+            # send bird location, top pipe location and bottom pipe location and determine from network whether to jump or not
             output = nets[birds.index(bird)].activate((bird.y, abs(bird.y - pipes[pipe_ind].height), abs(bird.y - pipes[pipe_ind].bottom)))
-            if (output[0] > 0.5):  # we use a tanh activation function so result will be between -1 and 1. if over 0.5 jump  
-                bird.jump()                   
-            
-                
+
+            if output[0] > 0.5:  # we use a tanh activation function so result will be between -1 and 1. if over 0.5 jump
+                if time.time()-start>0.125:
+                    start = time.time()
+                    bird.jump()
+
+
         base.move()
 
         rem = []
@@ -426,21 +408,9 @@ def eval_genomes(genomes, config):
         if add_pipe:
             score += 1
             # can add this line to give more reward for passing through a pipe (not required)
-            avg_fitness=0
             for genome in ge:
                 genome.fitness += 5
-                avg_fitness+=(genome.fitness)
-            
-            
-
             pipes.append(Pipe(WIN_WIDTH))
-            if(len(ge)!=0):
-                fitness_list.append(avg_fitness/len(ge))
-            else:
-                fitness_list.append(0)
-            gen_list.append(population.generation)
-            population_list.append(len(ge))
-            score_list.append(score)
 
         for r in rem:
             pipes.remove(r)
@@ -456,23 +426,21 @@ def eval_genomes(genomes, config):
         # break if score gets large enough
         if (score > 100):
             print(gen,score,ge[0].fitness,gen)
-            t = str(int(time.time()))
-            with open('Pickles/'+t+".pickle", "wb") as f:
-                 pickle.dump(ge[0],f)
-            f.close()
-            trainingResponse([[GAP,SEPARATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,WIN_HEIGHT],t+".pickle",score,ge[0].fitness,population.generation])
-            plotGraph('Pickles/'+t+".plot")
-            population.stop()
+            t = time.strftime("%H%M%S", time.localtime())
+            file = pickle_file + ".pickle"
+            path = "Verified_Pickles/" + file
+            with open(path, "wb") as f:
+                pickle.dump(ge[0], f)
+            trainingResponse([[GAP,SEPERATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,t],file,score,ge[0].fitness])
+            reached_limit = False
             break
+    return score
 
-def run(config_file):
-    global gen , population ,fitness_list,gen_list,population_list,score_list
+def run(config_file,pickle_file):
+
+    global gen  ,reached_limit
+    reached_limit = True
     gen = 0
-    fitness_list=[]
-    gen_list=[]
-    population_list=[]
-    score_list=[]
-
     """
     runs the NEAT algorithm to train a neural network to play flappy bird.
     :param config_file: location of config file
@@ -482,56 +450,58 @@ def run(config_file):
                          neat.DefaultSpeciesSet, neat.DefaultStagnation,
                          config_file)
 
+    genome_path = './Pickles/'+ pickle_file
+    with open(genome_path, "rb") as f:
+        genome = pickle.load(f)
+    genomes = [(1, genome)]
     # Create the population, which is the top-level object for a NEAT run.
-    population = neat.Population(config)
-
+    score = eval_genomes(genomes,config,pickle_file)
+    print("score: ",score)
 
     # Add a stdout reporter to show progress in the terminal.
-    population.add_reporter(neat.StdOutReporter(True))
-    stats = neat.StatisticsReporter()
-    population.add_reporter(stats)
+    # p.add_reporter(neat.StdOutReporter(True))
+    # stats = neat.StatisticsReporter()
+    # p.add_reporter(stats)
     #p.add_reporter(neat.Checkpointer(5))
-    winner = population.run(eval_genomes, 50) # Run for up to 50 generations, in case of not providing genration are generated till given fitness is achieved
 
-    # print('\nBest genome:\n{!s}'.format(winner))    show final stats
-
-    if(population.reached_limit): #if fitness or score not achieved
-        trainingResponse(None)
-
-
-
-def plotGraph(pickel_name):
-    fig,ax = plt.subplots()
-    scores = [i for i in range(len(score_list))]
-    plt.plot(scores, fitness_list, label = "fitness") 
-    plt.plot(scores, gen_list, label = "generation") 
-    plt.plot(scores, score_list, label = "score") 
-    plt.plot(scores, population_list, label = "population") 
-    plt.xlabel('jumps') 
-    plt.ylabel('fit/gen/pop/score') 
-    plt.legend() 
-    pickle.dump(fig, open(pickel_name, 'wb'))
-
-
-
-def updateValues(config_path):
-    global WIN,GAP,SEPARATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,WIN_HEIGHT
-    print (b'connection accepted from', listener.last_accepted)
-    # listens for parameter updates from *parameter_update.py*
-    while True:
-        try:
-            msg = conn.recv() # parameter updates from *parameter_update.py*
-            GAP,SEPARATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,WIN_HEIGHT = msg
-            run(config_path)         
-        except EOFError as e:
-            print("client disconnected")
-            exit_Training()
-            break
+    # Run for up to 50 generations.
+    
+    # winner = p.run(eval_genomes, 50)
+    # with open("Verified.pickle", "wb") as f:
+    #     pickle.dump(winner, f)
+    f.close()
         
+    # show final stats
+    if(reached_limit):
+        print("REACHED LIMIT")
+        trainingResponse([score])
+
 def exit_Training():
     print('Training  closed')
     listener.close()
     conn.close()
+    sys.exit(0)
+
+def updateValues(config_path):
+    global WIN,GAP,SEPERATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY
+    print (b'connection accepted from', listener.last_accepted)
+    while True:
+        try:
+            msg = conn.recv()
+            parameters = msg[0][1:-1].split(', ')
+            parameters = [int(x) for x in parameters]
+            GAP,SEPERATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,HEIGHT = parameters
+            pickle_file=msg[1]
+            print("Received new varaint",[GAP,SEPERATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY],msg)
+            run(config_path,pickle_file) 
+        except EOFError as e:
+            print("client disconnected")
+            exit_Training()
+            break      
+        
+def signal_handler(signal, frame):
+    print('Game closed')
+    listener.close()
     sys.exit(0)
 
 if __name__ == '__main__':

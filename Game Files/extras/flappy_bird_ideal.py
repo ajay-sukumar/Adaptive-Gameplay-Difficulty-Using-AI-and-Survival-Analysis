@@ -23,7 +23,7 @@ bird_images = [pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","b
 base_img = pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","base.png")).convert_alpha())
 
 gen = 0
-
+score = 0
 class Bird:
     """
     Bird class representing the flappy bird
@@ -54,7 +54,7 @@ class Bird:
         make the bird jump
         :return: None
         """
-        self.vel = -10.5
+        self.vel = -12
         self.tick_count = 0
         self.height = self.y
 
@@ -127,7 +127,7 @@ class Pipe():
     represents a pipe object
     """
     GAP = 250
-    VEL = 5
+    VEL = 6
 
     def __init__(self, x):
         """
@@ -155,7 +155,7 @@ class Pipe():
         set the height of the pipe, from the top of the screen
         :return: None
         """
-        self.height = random.randrange(50, 450)
+        self.height = random.randrange(90, 410) #50,450
         self.top = self.height - self.PIPE_TOP.get_height()
         self.bottom = self.height + self.GAP
 
@@ -298,13 +298,13 @@ def draw_window(win, birds, pipes, base, score, gen, pipe_ind):
     pygame.display.update()
 
 
-def eval_genomes(genomes, config):
+def game(genomes, config):
     """
     runs the simulation of the current population of
     birds and sets their fitness based on the distance they
     reach in the game.
     """
-    global WIN, gen
+    global WIN, gen,score
     win = WIN
     gen += 1
 
@@ -393,36 +393,44 @@ def eval_genomes(genomes, config):
         draw_window(WIN, birds, pipes, base, score, gen, pipe_ind)
 
         # break if score gets large enough
-        '''if score > 20:
-            pickle.dump(nets[0],open("best.pickle", "wb"))
-            break'''
 
+def replay_genome(config_path, genome_path="best.pickle"):
+    # Load requried NEAT config
+    config = neat.config.Config(neat.DefaultGenome, neat.DefaultReproduction, neat.DefaultSpeciesSet, neat.DefaultStagnation, config_path)
 
-def run(config_file):
+    # Unpickle saved winner
+    with open(genome_path, "rb") as f:
+        genome = pickle.load(f)
+
+    # Convert loaded genome into required data structure
+    genomes = [(1, genome)]
+
+    # Call game with only the loaded genome
+    game(genomes, config)
+
+# def run(config_file):
     """
     runs the NEAT algorithm to train a neural network to play flappy bird.
     :param config_file: location of config file
     :return: None
     """
-    config = neat.config.Config(neat.DefaultGenome, neat.DefaultReproduction,
-                         neat.DefaultSpeciesSet, neat.DefaultStagnation,
-                         config_file)
+    # config = neat.config.Config(neat.DefaultGenome, neat.DefaultReproduction,
+    #                      neat.DefaultSpeciesSet, neat.DefaultStagnation,
+    #                      config_file)
 
     # Create the population, which is the top-level object for a NEAT run.
-    p = neat.Population(config)
+    # p = neat.Population(config)
 
     # Add a stdout reporter to show progress in the terminal.
-    p.add_reporter(neat.StdOutReporter(True))
-    stats = neat.StatisticsReporter()
-    p.add_reporter(stats)
+    # p.add_reporter(neat.StdOutReporter(True))
+    # stats = neat.StatisticsReporter()
+    # p.add_reporter(stats)
     #p.add_reporter(neat.Checkpointer(5))
 
     # Run for up to 50 generations.
-    winner = p.run(eval_genomes, 50)
+    
 
-    # show final stats
-    print('\nBest genome:\n{!s}'.format(winner))
-
+   
 
 if __name__ == '__main__':
     # Determine path to configuration file. This path manipulation is
@@ -430,4 +438,6 @@ if __name__ == '__main__':
     # current working directory.
     local_dir = os.path.dirname(__file__)
     config_path = os.path.join(local_dir, 'config-feedforward.txt')
-    run(config_path)
+    replay_genome(config_path)
+    print(score)
+
