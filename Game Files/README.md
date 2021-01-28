@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 [![Run on Repl.it](https://repl.it/badge/github/techwithtim/NEAT-Flappy-Bird)](https://repl.it/github/techwithtim/NEAT-Flappy-Bird)
 # NEAT-Flappy-Bird
 An AI that plays flappy bird! Using the NEAT python module.
@@ -39,9 +38,6 @@ If you're intersted in a paid subscription with GitPod use the coupon code: TECH
 
 
 
-
-
-=======
 [![Run on Repl.it](https://repl.it/badge/github/techwithtim/NEAT-Flappy-Bird)](https://repl.it/github/techwithtim/NEAT-Flappy-Bird)
 # NEAT-Flappy-Bird
 An AI that plays flappy bird! Using the NEAT python module.
@@ -80,7 +76,3 @@ If you're intersted in a paid subscription with GitPod use the coupon code: TECH
 
 [![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/techwithtim/NEAT-Flappy-Bird/blob/master/flappy_bird.py)
 
-
-
-
->>>>>>> 936b8d4348c5bac759472f0301ec813e273a6006
