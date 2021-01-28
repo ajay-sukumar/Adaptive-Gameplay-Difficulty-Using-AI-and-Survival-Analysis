@@ -389,14 +389,13 @@ def eval_genomes(genomes, config):
             ge[x].fitness += 0.1
             bird.move()
 #             # send bird location, top pipe location and bottom pipe location and determine from network whether to jump or not
-# <<<<<<< HEAD
 #             current_time = time.time()
 #             if(current_time-last_time>=0):#if time gap btw taps is at least 250ms else output  is discarded and bird won't jump
 #                 output = nets[birds.index(bird)].activate((bird.y, abs(bird.y - pipes[pipe_ind].height), abs(bird.y - pipes[pipe_ind].bottom)))
 #                 if (output[0] > 0.75):  # we use a tanh activation function so result will be between -1 and 1. if over 0.5 jump  
 #                     bird.jump()
 #                     last_time = current_time                   
-# =======
+            # send bird location, top pipe location and bottom pipe location and determine from network whether to jump or not
             output = nets[birds.index(bird)].activate((bird.y, abs(bird.y - pipes[pipe_ind].height), abs(bird.y - pipes[pipe_ind].bottom)))
             if (output[0] > 0.5):  # we use a tanh activation function so result will be between -1 and 1. if over 0.5 jump  
                 bird.jump()                   
@@ -499,8 +498,7 @@ def run(config_file):
         trainingResponse(None)
 
 
-
-def plotGraph(pickel_name):
+def plotGraph(pickle_name):
     fig,ax = plt.subplots()
     scores = [i for i in range(len(score_list))]
     plt.plot(scores, fitness_list, label = "fitness") 
@@ -510,7 +508,7 @@ def plotGraph(pickel_name):
     plt.xlabel('jumps') 
     plt.ylabel('fit/gen/pop/score') 
     plt.legend() 
-    pickle.dump(fig, open(pickel_name, 'wb'))
+    pickle.dump(fig, open(pickle_name, 'wb'))
 
 
 

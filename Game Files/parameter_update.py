@@ -28,6 +28,8 @@ f1 = NONE
 f2 = NONE
 f_writer = NONE
 f_reader = NONE
+ideal_sim_mode = False #decides whether to simulate variants or ganrate variants.
+
 port = 6006
 ideal_sim_mode = True #decides whether to simulate variants or ganrate variants.
 
@@ -64,7 +66,7 @@ while(True):
         address = ('localhost', port)
         conn = Client(address, authkey=b'secret password')
         i = 0
-        variant_limit = 25 # number of variants to be generated
+        variant_limit = int(input("number of variants to generate:"))
         while(ideal_sim_mode or  i<variant_limit):
             # [GAP,SEPARATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,WIN_HEIGHT] variants are genrated and send to the port
             if(ideal_sim_mode):
