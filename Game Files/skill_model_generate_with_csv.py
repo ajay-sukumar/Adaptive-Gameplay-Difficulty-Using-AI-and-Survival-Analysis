@@ -1,3 +1,4 @@
+
 """
     1)simulate game variant received from parameter_update.py and check if it is playable with click limit (playable only if it reach score:100 or fitness:1800)
     2)After checking playability necessary files are sent to game parameter_update.py
@@ -12,15 +13,17 @@ import time
 import neat
 import visualize
 import pickle
-import threading
-import signal
+import csv
 import sys
 import math
-from multiprocessing.connection import Listener
-import multiprocessing
+import pandas as pd
+import numpy as np
 
 pygame.font.init()  # init font
-
+list1=[]
+list2=[]
+list3=[]
+list4=[]
 WIN_WIDTH = 600
 WIN_HEIGHT = 800
 FLOOR = 730
@@ -30,7 +33,6 @@ VELOCITY = 40 #VELOCITY <20,60>
 PIPE_VELOCITY  = 6 #PIPE_VELOCITY <4,13>
 JUMP_VELOCITY = -12 #JUMP_VELOCITY <-5,-12>
 GRAVITY = 3  #GRAVITY <2,3>
-
 FLOOR = math.floor(730 * WIN_HEIGHT / 800)
 
 STAT_FONT = pygame.font.SysFont("comicsans", 50)
@@ -38,18 +40,20 @@ END_FONT = pygame.font.SysFont("comicsans", 70)
 DRAW_LINES = False
 WIN = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
 pygame.display.set_caption("Flappy Bird")
-reached_limit = True
+# reached_limit = True
 pipe_img = pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","pipe.png")).convert_alpha())
 bg_img = pygame.transform.scale(pygame.image.load(os.path.join("imgs","bg.png")).convert_alpha(), (600, 900))
 bird_images = [pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","bird" + str(x) + ".png"))) for x in range(1,4)]
 base_img = pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","base.png")).convert_alpha())
-address = ('localhost', 6005)     # family is deduced to be 'AF_INET'
-listener = Listener(address, authkey=b'secret password')
-conn = listener.accept()
+# address = ('localhost', 6005)     # family is deduced to be 'AF_INET'
+# listener = Listener(address, authkey=b'secret password')
+# conn = listener.accept()
 gen = 0
+score = 0
+sample = 5
 
-def trainingResponse(params = None):
-    conn.send(params)
+# def trainingResponse(params = None):
+#     conn.send(params)
 
 class Bird:
     """
@@ -325,7 +329,7 @@ def draw_window(win, birds, pipes, base, score, gen, pipe_ind):
     pygame.display.update()
 
 
-def eval_genomes(genomes, config,pickle_file):
+def eval_genomes(genomes, config,pickle_file,difficulty):
     """
     runs the simulation of the current population of
     birds and sets their fitness based on the distance they
@@ -377,11 +381,12 @@ def eval_genomes(genomes, config,pickle_file):
 
             # send bird location, top pipe location and bottom pipe location and determine from network whether to jump or not
             output = nets[birds.index(bird)].activate((bird.y, abs(bird.y - pipes[pipe_ind].height), abs(bird.y - pipes[pipe_ind].bottom)))
-
-            if output[0] > 0.5:  # we use a tanh activation function so result will be between -1 and 1. if over 0.5 jump
-                if time.time()-start>0.125:
-                    start = time.time()
-                    bird.jump()
+            j_val = random.uniform(0,1)
+            if j_val<difficulty:
+                if output[0] > 0.5:  # we use a tanh activation function so result will be between -1 and 1. if over 0.5 jump
+                    if time.time()-start>0.125:
+                        start = time.time()
+                        bird.jump()
 
 
         base.move()
@@ -425,20 +430,28 @@ def eval_genomes(genomes, config,pickle_file):
         
         # break if score gets large enough
         if (score > 100):
-            print(gen,score,ge[0].fitness,gen)
-            path = "Verified_Pickles/" + pickle_file
-            with open(path, "wb") as f:
-                pickle.dump(ge[0], f)
-            trainingResponse([[GAP,SEPERATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY],pickle_file,score,ge[0].fitness])
-            reached_limit = False
+            # print(gen,score,ge[0].fitness,gen)
+            # t = time.strftime("%H%M%S", time.localtime())
+            # file = pickle_file + ".pickle"
+            # path = "Verified_Pickles/" + file
+            # with open(path, "wb") as f:
+            #     pickle.dump(ge[0], f)
+            # trainingResponse([[GAP,SEPERATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,t],file,score,ge[0].fitness])
+            # reached_limit = False
             break
+    print("score: ",score,difficulty)
+    if difficulty==0.6:
+        list1.append(score)
+    elif difficulty==0.7:
+        list2.append(score)
+    elif difficulty==0.8:
+        list3.append(score)
+    # else:
+    #     list4.append(score)
     return score
 
 def run(config_file,pickle_file):
-
-    global gen  ,reached_limit
-    reached_limit = True
-    gen = 0
+    # reached_limit = True
     """
     runs the NEAT algorithm to train a neural network to play flappy bird.
     :param config_file: location of config file
@@ -448,14 +461,19 @@ def run(config_file,pickle_file):
                          neat.DefaultSpeciesSet, neat.DefaultStagnation,
                          config_file)
 
-    genome_path = './Pickles/'+ pickle_file
+    genome_path = './Verified_Pickles/'+ pickle_file
     with open(genome_path, "rb") as f:
         genome = pickle.load(f)
     genomes = [(1, genome)]
     # Create the population, which is the top-level object for a NEAT run.
-    score = eval_genomes(genomes,config,pickle_file)
-    print("score: ",score)
-
+    difficulties = [0.6,0.7,0.8]
+    for difficulty in difficulties:
+        for i in range(sample):
+            score = eval_genomes(genomes,config,pickle_file,difficulty)
+        # print("score: ",score,difficulty)
+    # df2= pd.DataFrame({'0.6':list1,'0.7':list2,'0.8':list3,'0.9':list4},columns=['0.6','0.7','0.8','0.9'])
+    df2= pd.DataFrame({'0.6':list1,'0.7':list2,'0.8':list3},columns=['0.6','0.7','0.8'])
+    df2.to_csv('human_play.csv', mode='a', header=False, index = False)
     # Add a stdout reporter to show progress in the terminal.
     # p.add_reporter(neat.StdOutReporter(True))
     # stats = neat.StatisticsReporter()
@@ -470,37 +488,38 @@ def run(config_file,pickle_file):
     f.close()
         
     # show final stats
-    if(reached_limit):
-        print("REACHED LIMIT")
-        trainingResponse([score])
+    # if(reached_limit):
+    #     trainingResponse([score])
 
-def exit_Training():
-    print('Training  closed')
-    listener.close()
-    conn.close()
-    sys.exit(0)
+# def exit_Training():
+#     print('Training  closed')
+#     listener.close()
+#     conn.close()
+#     sys.exit(0)
 
-def updateValues(config_path):
+def read_variant_data(config_path):
     global WIN,GAP,SEPERATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY
-    print (b'connection accepted from', listener.last_accepted)
-    while True:
-        try:
-            msg = conn.recv()
-            parameters = msg[0][1:-1].split(', ')
-            parameters = [int(x) for x in parameters]
-            GAP,SEPERATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,HEIGHT = parameters
-            pickle_file=msg[1]
-            print("Received new varaint",[GAP,SEPERATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY],msg)
-            run(config_path,pickle_file) 
-        except EOFError as e:
-            print("client disconnected")
-            exit_Training()
-            break      
+    with open('trained_verified_variants.csv') as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter=',')
+        for row in csv_reader:
+            print(row[0])
+            if (row[0]=="Failed"):
+                print("skipping failed variant")
+            else:    
+                GAP,SEPERATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY = [ int(i) for i in row[0][1:-1].split(', ')]
+                pickle_file=row[1]
+                print("Variant parameters ",[GAP,SEPERATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY])
+                with open('human_play.csv','a') as fd:
+                    csv_writer = csv.writer(fd, delimiter=',', lineterminator = '\n')
+                    line = row[0:2]
+                    csv_writer.writerow(line)
+                    csv_writer.writerow(['0.6','0.7','0.8'])
+                list1.clear()
+                list2.clear()
+                list3.clear()
+                    # list4.clear()
+                run(config_path,pickle_file)      
         
-def signal_handler(signal, frame):
-    print('Game closed')
-    listener.close()
-    sys.exit(0)
 
 if __name__ == '__main__':
     """
@@ -510,4 +529,4 @@ if __name__ == '__main__':
     """
     local_dir = os.path.dirname(__file__)
     config_path = os.path.join(local_dir, 'config-feedforward.txt')
-    updateValues(config_path)
+    read_variant_data(config_path)

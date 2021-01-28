@@ -497,12 +497,7 @@ def updateValues(config_path):
         except EOFError as e:
             print("client disconnected")
             exit_Training()
-            break      
-        
-def signal_handler(signal, frame):
-    print('Game closed')
-    listener.close()
-    sys.exit(0)
+                  
 
 if __name__ == '__main__':
     """

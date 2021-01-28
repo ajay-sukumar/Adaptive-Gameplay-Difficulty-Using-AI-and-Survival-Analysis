@@ -23,17 +23,39 @@ from pickle import NONE
 from time import sleep
 import random
 import csv
+import os
 f1 = NONE
 f2 = NONE
 f_writer = NONE
 f_reader = NONE
+port = 6006
 ideal_sim_mode = True #decides whether to simulate variants or ganrate variants.
+
 if(ideal_sim_mode):
+    if(not os.path.exists("trained_variants.csv")):
+        print("No such file exist: trained_variants.csv")
+        exit()
+    if not os.path.exists("Pickles"):
+        print("No such directory exist: Pickles")
+        exit()
+    if not os.path.exists("Verified_Pickles"):
+        os.makedirs("Verified_Pickles")
+        print("directory created: Verified_Pickles")
+    f1 = open('trained_verified_variants.csv',mode='a')
     f_writer = csv.writer(f1,delimiter=',', lineterminator = '\n') # file to save variants
+
+
     f2 = open('trained_variants.csv',mode='r')
     f_reader = csv.reader(f2,delimiter=',')
     port = 6005
+    if not os.path.exists("Pickles"):
+        print("No such directory: Pickles")
+        exit()
+
 else: 
+    if not os.path.exists("Pickles"):
+        os.makedirs("Pickles")
+        print("directory created: Pickles")
     f1 = open('trained_variants.csv',mode='a')
     f_writer = csv.writer(f1,delimiter=',', lineterminator = '\n') # file to save variants
     #port = 6006
@@ -56,7 +78,7 @@ while(True):
                 print("Failed") # variants sent are not playable for ai agent
             elif(len(msg)==1):
                 print("Failed",msg) # print score
-                f_writer.writerow("Failed"+str(msg[0]))
+                f_writer.writerow(["Failed",msg[0],"",""])
             else:
                 print(msg)  # variants sent are playable for ai agent
                 f_writer.writerow(msg)
