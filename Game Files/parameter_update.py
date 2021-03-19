@@ -30,6 +30,7 @@ f_writer = NONE
 f_reader = NONE
 port = 6006
 ideal_sim_mode = True #decides whether to simulate variants or ganrate variants.
+ideal_sim_mode =  input("Modes\n 1 : ideal simulation mode \n2 : variant generation\nSelect the mode:") == "1" #decides whether to simulate variants or ganrate variants.
 
 if(ideal_sim_mode):
     if(not os.path.exists("trained_variants.csv")):
