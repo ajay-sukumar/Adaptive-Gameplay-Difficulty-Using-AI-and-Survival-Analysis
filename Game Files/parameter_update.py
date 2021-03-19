@@ -28,8 +28,6 @@ f1 = NONE
 f2 = NONE
 f_writer = NONE
 f_reader = NONE
-ideal_sim_mode = False #decides whether to simulate variants or ganrate variants.
-
 port = 6006
 ideal_sim_mode = True #decides whether to simulate variants or ganrate variants.
 
@@ -66,13 +64,15 @@ while(True):
         address = ('localhost', port)
         conn = Client(address, authkey=b'secret password')
         i = 0
-        variant_limit = int(input("number of variants to generate:"))
+        if not ideal_sim_mode:
+            variant_limit = int(input("number of variants to generate:"))
         while(ideal_sim_mode or  i<variant_limit):
             # [GAP,SEPARATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,WIN_HEIGHT] variants are genrated and send to the port
             if(ideal_sim_mode):
                 msg = next(f_reader)
             else:
-                msg  = [random.randint(150,250),random.randint(0,200),60,random.randint(4,13),random.randint(-12,-5),3,random.randint(350,950)]
+                msg = [250,0+i*20,60,6,-12,3,800]
+                # msg  = [random.randint(150,250),random.randint(0,200),60,random.randint(4,13),random.randint(-12,-5),3,random.randint(350,950)]
             conn.send(msg) #send variants to *flappy_bird_variant_generate.py*
             print(i," param update:",msg)      
             msg = conn.recv() #wait for response from *flappy_bird_variant_generate.py*

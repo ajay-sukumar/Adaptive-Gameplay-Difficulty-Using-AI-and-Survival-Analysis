@@ -1,4 +1,3 @@
-
 """
     1)simulate game variant received from parameter_update.py and check if it is playable with click limit (playable only if it reach score:100 or fitness:1800)
     2)After checking playability necessary files are sent to game parameter_update.py
@@ -427,12 +426,10 @@ def eval_genomes(genomes, config,pickle_file):
         # break if score gets large enough
         if (score > 100):
             print(gen,score,ge[0].fitness,gen)
-            t = time.strftime("%H%M%S", time.localtime())
-            file = pickle_file + ".pickle"
-            path = "Verified_Pickles/" + file
+            path = "Verified_Pickles/" + pickle_file
             with open(path, "wb") as f:
                 pickle.dump(ge[0], f)
-            trainingResponse([[GAP,SEPERATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,t],file,score,ge[0].fitness])
+            trainingResponse([[GAP,SEPERATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY],pickle_file,score,ge[0].fitness])
             reached_limit = False
             break
     return score
@@ -474,6 +471,7 @@ def run(config_file,pickle_file):
         
     # show final stats
     if(reached_limit):
+        print("REACHED LIMIT")
         trainingResponse([score])
 
 def exit_Training():
@@ -497,7 +495,12 @@ def updateValues(config_path):
         except EOFError as e:
             print("client disconnected")
             exit_Training()
-                  
+            break      
+        
+def signal_handler(signal, frame):
+    print('Game closed')
+    listener.close()
+    sys.exit(0)
 
 if __name__ == '__main__':
     """
