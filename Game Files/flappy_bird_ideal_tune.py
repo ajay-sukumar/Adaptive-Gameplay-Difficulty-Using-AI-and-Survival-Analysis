@@ -43,10 +43,15 @@ pipe_img = pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","pipe.
 bg_img = pygame.transform.scale(pygame.image.load(os.path.join("imgs","bg.png")).convert_alpha(), (600, 900))
 bird_images = [pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","bird" + str(x) + ".png"))) for x in range(1,4)]
 base_img = pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","base.png")).convert_alpha())
-address = ('localhost', 6005)     # family is deduced to be 'AF_INET'
+PORT = 6006
+if(len(sys.argv)>1):
+    PORT = int(sys.argv[1])
+print(PORT)
+address = ('localhost', PORT)     # family is deduced to be 'AF_INET'
 listener = Listener(address, authkey=b'secret password')
 conn = listener.accept()
 gen = 0
+
 
 def trainingResponse(params = None):
     conn.send(params)
@@ -472,7 +477,7 @@ def run(config_file,pickle_file):
     # show final stats
     if(reached_limit):
         print("REACHED LIMIT")
-        trainingResponse([score])
+        trainingResponse([score,pickle_file])
 
 def exit_Training():
     print('Training  closed')
@@ -495,7 +500,11 @@ def updateValues(config_path):
         except EOFError as e:
             print("client disconnected")
             exit_Training()
-            break      
+        except Exception as e :
+            print(e)
+            exit_Training()
+
+                  
         
 def signal_handler(signal, frame):
     print('Game closed')

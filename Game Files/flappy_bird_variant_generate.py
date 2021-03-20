@@ -41,12 +41,15 @@ GRAVITY = 3  #GRAVITY <0,3>
 WIN_HEIGHT = 800 #WORLD_HEIGHT <650,950>
 FLOOR = math.floor(730 * WIN_HEIGHT / 800)
 WIN = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
+PORT = 6006
+if(len(sys.argv)>1):
+    PORT = int(sys.argv[1])
 pygame.display.set_caption("Flappy Bird")
 pipe_img = pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","pipe.png")).convert_alpha())
 bg_img = pygame.transform.scale(pygame.image.load(os.path.join("imgs","bg.png")).convert_alpha(), (600, 900))
 bird_images = [pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","bird" + str(x) + ".png"))) for x in range(1,4)]
 base_img = pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","base.png")).convert_alpha())
-address = ('localhost', 6006)     # family is deduced to be 'AF_INET' 
+address = ('localhost', PORT)     # family is deduced to be 'AF_INET' 
 listener = Listener(address, authkey=b'secret password') # start listening to port 6006, port number should be same as in *parameter_update.py*
 conn = listener.accept()
 gen = 0
@@ -519,12 +522,13 @@ def updateValues(config_path):
     while True:
         try:
             msg = conn.recv() # parameter updates from *parameter_update.py*
+            print(msg)
             GAP,SEPARATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,WIN_HEIGHT = msg
             run(config_path)         
         except EOFError as e:
             print("client disconnected")
             exit_Training()
-            break
+            
         
 def exit_Training():
     print('Training  closed')
