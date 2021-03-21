@@ -21,14 +21,8 @@ import numpy as np
 import time
 
 pygame.font.init()  # init font
-list1=[]
-list2=[]
-list3=[]
-list4=[]
-list5=[]
-list6=[]
-list7=[]
-list8=[]
+
+
 WIN_WIDTH = 600
 WIN_HEIGHT = 800
 FLOOR = 730
@@ -58,6 +52,10 @@ gen = 0
 score = 0
 sample = 20
 difficulties = [0.55,0.6,0.65,0.7,0.75,0.8,0.85]
+score_list = []
+for i in difficulties:   # for n probability
+    score_list.append([])
+
 
 # def trainingResponse(params = None):
 #     conn.send(params)
@@ -447,20 +445,7 @@ def eval_genomes(genomes, config,pickle_file,difficulty):
             # reached_limit = False
             break
     print("score: ",score,difficulty)
-    if difficulty==0.55:
-        list1.append(score)
-    elif difficulty==0.6:
-        list2.append(score)
-    elif difficulty==0.65:
-        list3.append(score)
-    elif difficulty==0.7:
-        list4.append(score)
-    elif difficulty==0.75:
-        list5.append(score)
-    elif difficulty==0.8:
-        list6.append(score)
-    else:
-        list7.append(score)
+    score_list[difficulties.index(difficulty)].append(score) # for n probability
     return score
 
 def run(config_file,pickle_file):
@@ -484,7 +469,7 @@ def run(config_file,pickle_file):
             score = eval_genomes(genomes,config,pickle_file,difficulty)
         # print("score: ",score,difficulty)
     # df2= pd.DataFrame({'0.6':list1,'0.7':list2,'0.8':list3,'0.9':list4},columns=['0.6','0.7','0.8','0.9'])
-    df2= pd.DataFrame({'0.55':list1,'0.6':list2,'0.65':list3,'0.7':list4,'0.75':list5,'0.8':list6,'0.85':list7},columns=difficulties)
+    df2= pd.DataFrame(dict(zip(difficulties, score_list)),columns=difficulties) # for n probability
     df2.to_csv(pickle_file+'.csv', mode='a', header=False, index = False)
     # Add a stdout reporter to show progress in the terminal.
     # p.add_reporter(neat.StdOutReporter(True))
@@ -522,15 +507,8 @@ def read_variant_data(config_path):
                 csv_writer = csv.writer(fd, delimiter=',', lineterminator = '\n')
                 csv_writer.writerow(line)
                 csv_writer.writerow(difficulties)
-            list1.clear()
-            list2.clear()
-            list3.clear()
-            list4.clear()
-            list5.clear()
-            list6.clear()
-            list7.clear()
-
-                # list4.clear()
+            for i in score_list: # for n probability
+                i.clear()
             run(config_path,pickle_file)      
         else:
             print("not enough parameters")

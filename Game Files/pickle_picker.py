@@ -1,6 +1,6 @@
 import csv
 import os
-with open('trained_verified_variants.csv') as csv_file:
+with open('trained_verified_variants_jump.csv') as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
         for row in csv_reader:
             print(row[0])
