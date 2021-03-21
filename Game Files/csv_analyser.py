@@ -12,9 +12,9 @@ for i in os.listdir():
                 elif(j==2):
                     pass
                 elif(j==3):
-                    row_sum=row
+                    row_sum=[int(i) for i in row]
                 else: 
-                    for index in len(row_sum):
-                        row_sum[index] += row[index]
-                j+=0
-            print(csv_reader[0],row_sum)
+                    for index in range(len(row_sum)):
+                        row_sum[index] += int(row[index])
+                j+=1
+            print([i/(j-2) for i in row_sum])
