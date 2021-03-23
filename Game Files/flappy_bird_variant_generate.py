@@ -460,11 +460,11 @@ def eval_genomes(genomes, config):
             print(gen,score,ge[0].fitness,gen)
             # t = str(int(time.time()))
             f_name = str(GAP)
-            with open('Pipe_gap_pickles/'+f_name+".pickle", "wb") as f:
+            with open('Pickles/'+f_name+".pickle", "wb") as f:
                  pickle.dump(ge[0],f)
             f.close()
             trainingResponse([[GAP,SEPARATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,WIN_HEIGHT],f_name+".pickle",score,ge[0].fitness,population.generation])
-            plotGraph('Pipe_gap_pickles/'+f_name+".plot")
+            plotGraph('Pickles/'+f_name+".plot")
             population.stop()
             break
 
@@ -502,7 +502,7 @@ def run(config_file):
         trainingResponse(None)
 
 
-def plotGraph(pickle_name):
+def plotGraph(plot_file_name):
     fig,ax = plt.subplots()
     scores = [i for i in range(len(score_list))]
     plt.plot(scores, fitness_list, label = "fitness") 
@@ -512,7 +512,7 @@ def plotGraph(pickle_name):
     plt.xlabel('jumps') 
     plt.ylabel('fit/gen/pop/score') 
     plt.legend() 
-    pickle.dump(fig, open(pickle_name, 'wb'))
+    pickle.dump(fig, open(plot_file_name, 'wb'))
 
 
 

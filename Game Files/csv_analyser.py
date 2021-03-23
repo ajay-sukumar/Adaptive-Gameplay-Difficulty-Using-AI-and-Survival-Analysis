@@ -8,7 +8,7 @@ for i in os.listdir():
             row_sum = []
             for row in csv_reader:
                 if(j==0):
-                    print(row)
+                    print(row, i)
                 elif(j==2):
                     pass
                 elif(j==3):
@@ -17,4 +17,4 @@ for i in os.listdir():
                     for index in range(len(row_sum)):
                         row_sum[index] += int(row[index])
                 j+=1
-            print([i/(j-2) for i in row_sum])
+            print([[i,i/(j-2)] for i in row_sum])
