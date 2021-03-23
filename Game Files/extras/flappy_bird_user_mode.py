@@ -14,6 +14,7 @@ import neat
 import visualize
 import pickle
 import sys
+import statistics
 pygame.font.init()  # init font
 
 WIN_WIDTH = 600
@@ -32,7 +33,11 @@ bird_images = [pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","b
 base_img = pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","base.png")).convert_alpha())
 
 # gen = 0
-
+PIPE_GAP = 210
+SEPARATION = 100
+PIPE_VELOCITY = 9
+JUMP_VELOCITY = -9
+score_list = []
 class Bird:
     """
     Bird class representing the flappy bird
@@ -63,7 +68,7 @@ class Bird:
         make the bird jump
         :return: None
         """
-        self.vel = -12.5
+        self.vel = JUMP_VELOCITY
         self.tick_count = 0
         self.height = self.y
 
@@ -135,8 +140,8 @@ class Pipe():
     """
     represents a pipe object
     """
-    GAP = 250
-    VEL = 6
+    GAP = PIPE_GAP
+    VEL = PIPE_VELOCITY
 
     def __init__(self, x):
         """
@@ -145,7 +150,7 @@ class Pipe():
         :param y: int
         :return" None
         """
-        self.x = x
+        self.x = x - 100 + SEPARATION
         self.height = 0
 
         # where the top and bottom of the pipe is
@@ -336,19 +341,23 @@ def main():
     score = 0
 
     clock = pygame.time.Clock()
-
+    l = [PIPE_GAP,SEPARATION,PIPE_VELOCITY,JUMP_VELOCITY]
+    print(l)
     run = True
     while True:
         clock.tick(30)
         bird.move()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                print(statistics.mean(score_list))
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE and run:
                     bird.jump()
                 if event.key == pygame.K_SPACE and run==False:
+                    print(score)
+                    score_list.append(score)
                     run=True
                     bird = Bird(230,350)
                     base = Base(730)

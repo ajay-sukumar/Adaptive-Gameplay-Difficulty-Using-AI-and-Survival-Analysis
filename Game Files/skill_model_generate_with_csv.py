@@ -51,7 +51,9 @@ pickle_file=""
 gen = 0
 score = 0
 sample = 20
-difficulties = [0.55,0.6,0.65,0.7,0.75,0.8,0.85]
+difficulties = [0.7]
+j_error_list = np.random.normal(0, 0.8, 1000) ######################################################
+j_error_parameters = [0,0.8,1000,difficulties]
 score_list = []
 for i in difficulties:   # for n probability
     score_list.append([])
@@ -351,7 +353,7 @@ def eval_genomes(genomes, config,pickle_file,difficulty):
     birds = []
     ge = []
     for genome_id, genome in genomes:
-        genome.fitness = 0  # start with fitness level of 0
+        # genome.fitness = 0  # start with fitness level of 0
         net = neat.nn.FeedForwardNetwork.create(genome, config)
         nets.append(net)
         birds.append(Bird(230,350))
@@ -381,17 +383,20 @@ def eval_genomes(genomes, config,pickle_file,difficulty):
                 pipe_ind = 1                                                                 # pipe on the screen for neural network input
 
         for x, bird in enumerate(birds):  # give each bird a fitness of 0.1 for each frame it stays alive
-            ge[x].fitness += 0.1
+            # ge[x].fitness += 0.1
             bird.move()
 
             # send bird location, top pipe location and bottom pipe location and determine from network whether to jump or not
             output = nets[birds.index(bird)].activate((bird.y, abs(bird.y - pipes[pipe_ind].height), abs(bird.y - pipes[pipe_ind].bottom)))
-            j_val = random.uniform(0,1)
-            if j_val<difficulty:
-                if output[0] > 0.5:  # we use a tanh activation function so result will be between -1 and 1. if over 0.5 jump
-                    if time.time()-start>0.125:
-                        start = time.time()
-                        bird.jump()
+            error_prob = random.uniform(0,1)
+            if error_prob<difficulty:
+                j_error = random.choice(j_error_list)  
+                output[0]+=j_error
+
+            if output[0] > 0.5:  # we use a tanh activation function so result will be between -1 and 1. if over 0.5 jump
+                if time.time()-start>0.125:
+                    start = time.time()
+                    bird.jump()
 
 
         base.move()
@@ -403,7 +408,7 @@ def eval_genomes(genomes, config,pickle_file,difficulty):
             # check for collision
             for bird in birds:
                 if pipe.collide(bird, win):
-                    ge[birds.index(bird)].fitness -= 1
+                    # ge[birds.index(bird)].fitness -= 1
                     nets.pop(birds.index(bird))
                     ge.pop(birds.index(bird))
                     birds.pop(birds.index(bird))
@@ -418,8 +423,8 @@ def eval_genomes(genomes, config,pickle_file,difficulty):
         if add_pipe:
             score += 1
             # can add this line to give more reward for passing through a pipe (not required)
-            for genome in ge:
-                genome.fitness += 5
+            # for genome in ge:
+            #     genome.fitness += 5
             pipes.append(Pipe(WIN_WIDTH))
 
         for r in rem:
@@ -459,7 +464,7 @@ def run(config_file,pickle_file):
                          neat.DefaultSpeciesSet, neat.DefaultStagnation,
                          config_file)
 
-    genome_path = './Verified_Pickles/'+ pickle_file
+    genome_path = './Pipe_gap_verified_pickles/'+ pickle_file
     with open(genome_path, "rb") as f:
         genome = pickle.load(f)
     genomes = [(1, genome)]
@@ -469,8 +474,9 @@ def run(config_file,pickle_file):
             score = eval_genomes(genomes,config,pickle_file,difficulty)
         # print("score: ",score,difficulty)
     # df2= pd.DataFrame({'0.6':list1,'0.7':list2,'0.8':list3,'0.9':list4},columns=['0.6','0.7','0.8','0.9'])
+    pipe_gap_csv = './Pipe_gap_scores/' + pickle_file + '.csv'
     df2= pd.DataFrame(dict(zip(difficulties, score_list)),columns=difficulties) # for n probability
-    df2.to_csv(pickle_file+'.csv', mode='a', header=False, index = False)
+    df2.to_csv(pipe_gap_csv, mode='a', header=False, index = False)
     # Add a stdout reporter to show progress in the terminal.
     # p.add_reporter(neat.StdOutReporter(True))
     # stats = neat.StatisticsReporter()
@@ -502,10 +508,12 @@ def read_variant_data(config_path):
             line = sys.argv[1:]
             line = GAP,SEPERATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY= [ int(i) for i in sys.argv[1:-1]]
             pickle_file = sys.argv[-1]
+            pipe_gap_csv = './Pipe_gap_scores/' + pickle_file + '.csv'
             print("Variant parameters ",[GAP,SEPERATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY])
-            with open(pickle_file+'.csv','a') as fd:
+            with open(pipe_gap_csv,'a') as fd:
                 csv_writer = csv.writer(fd, delimiter=',', lineterminator = '\n')
                 csv_writer.writerow(line)
+                csv_writer.writerow(j_error_parameters)
                 csv_writer.writerow(difficulties)
             for i in score_list: # for n probability
                 i.clear()
@@ -526,3 +534,12 @@ if __name__ == '__main__':
     local_dir = os.path.dirname(__file__)
     config_path = os.path.join(local_dir, 'config-feedforward.txt')
     read_variant_data(config_path)
+
+
+
+
+
+
+
+
+    Task - The multiprocessing framework was implemented in flappy_bird_variant_generate.py, flappy_bird_ideal_tune.py, skill_model_generate_csv

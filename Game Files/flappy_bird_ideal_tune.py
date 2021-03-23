@@ -431,7 +431,7 @@ def eval_genomes(genomes, config,pickle_file):
         # break if score gets large enough
         if (score > 100):
             print(gen,score,ge[0].fitness,gen)
-            path = "Verified_Pickles/" + pickle_file
+            path = "Pipe_gap_verified_pickles/" + pickle_file
             with open(path, "wb") as f:
                 pickle.dump(ge[0], f)
             trainingResponse([[GAP,SEPERATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY],pickle_file,score,ge[0].fitness])
@@ -453,7 +453,7 @@ def run(config_file,pickle_file):
                          neat.DefaultSpeciesSet, neat.DefaultStagnation,
                          config_file)
 
-    genome_path = './Pickles/'+ pickle_file
+    genome_path = './Pipe_gap_pickles/'+ pickle_file
     with open(genome_path, "rb") as f:
         genome = pickle.load(f)
     genomes = [(1, genome)]
