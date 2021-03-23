@@ -33,7 +33,7 @@ DRAW_LINES = False
 
 GAP = 250 #SEPARATION <150,250> 250
 SEPARATION =  100#SEPARATION <0,200> 100
-VELOCITY = 40 #VELOCITY <20,60>
+VELOCITY = 60 #VELOCITY <20,60>
 PIPE_VELOCITY  = 6 #PIPE_VELOCITY <4,13> 5 
 JUMP_VELOCITY = -12 #JUMP_VELOCITY <-5,-12> -10
 
@@ -458,12 +458,13 @@ def eval_genomes(genomes, config):
         # break if score gets large enough
         if (score > 100):
             print(gen,score,ge[0].fitness,gen)
-            t = str(int(time.time()))
-            with open('Pickles/'+t+".pickle", "wb") as f:
+            # t = str(int(time.time()))
+            f_name = str(GAP)
+            with open('Pipe_gap_pickles/'+f_name+".pickle", "wb") as f:
                  pickle.dump(ge[0],f)
             f.close()
-            trainingResponse([[GAP,SEPARATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,WIN_HEIGHT],t+".pickle",score,ge[0].fitness,population.generation])
-            plotGraph('Pickles/'+t+".plot")
+            trainingResponse([[GAP,SEPARATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,WIN_HEIGHT],f_name+".pickle",score,ge[0].fitness,population.generation])
+            plotGraph('Pipe_gap_pickles/'+f_name+".plot")
             population.stop()
             break
 
