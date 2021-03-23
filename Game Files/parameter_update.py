@@ -81,7 +81,7 @@ if(ideal_sim_mode):
     if not os.path.exists("Pickles"):
         print("No such directory: Pickles")
         exit()
-    system_call_command = "gnome-terminal -x python flappy_bird_ideal_tune.py "
+    system_call_command = "gnome-terminal -x python flappy_bird_ideal_tune.py "  
 
 
 else: 
@@ -96,7 +96,7 @@ else:
 
 
 i = 0
-while(ideal_sim_mode or  i<variant_limit):
+while(ideal_sim_mode or i<variant_limit):
     try:
         # [GAP,SEPARATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,WIN_HEIGHT] variants are genrated and send to the port
         if(ideal_sim_mode):
