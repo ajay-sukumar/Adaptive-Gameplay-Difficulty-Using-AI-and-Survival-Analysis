@@ -464,7 +464,7 @@ def run(config_file,pickle_file):
                          neat.DefaultSpeciesSet, neat.DefaultStagnation,
                          config_file)
 
-    genome_path = './Pipe_gap_verified_pickles/'+ pickle_file
+    genome_path = './Verified_Pickles/'+ pickle_file
     with open(genome_path, "rb") as f:
         genome = pickle.load(f)
     genomes = [(1, genome)]
@@ -534,12 +534,3 @@ if __name__ == '__main__':
     local_dir = os.path.dirname(__file__)
     config_path = os.path.join(local_dir, 'config-feedforward.txt')
     read_variant_data(config_path)
-
-
-
-
-
-
-
-
-    Task - The multiprocessing framework was implemented in flappy_bird_variant_generate.py, flappy_bird_ideal_tune.py, skill_model_generate_csv

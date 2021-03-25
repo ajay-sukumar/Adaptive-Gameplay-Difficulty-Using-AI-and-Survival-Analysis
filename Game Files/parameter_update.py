@@ -19,7 +19,6 @@
 """
 
 from multiprocessing.connection import Client
-from pickle import NONE
 from time import sleep
 import random
 import csv

@@ -126,11 +126,7 @@ class Pipe():
     """
     represents a pipe object
     """
-<<<<<<< HEAD:Game Files/extras/flappy_bird.py
     GAP = 200
-=======
-    GAP = 250
->>>>>>> 936b8d4348c5bac759472f0301ec813e273a6006:Game Files/flappy_bird.py
     VEL = 5
 
     def __init__(self, x):

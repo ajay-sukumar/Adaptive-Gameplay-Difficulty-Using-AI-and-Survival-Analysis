@@ -525,6 +525,8 @@ def updateValues(config_path):
             msg = conn.recv() # parameter updates from *parameter_update.py*
             print(msg)
             GAP,SEPARATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,WIN_HEIGHT = msg
+            pickle_name =  '_'.join(map(str, msg))
+            pygame.display.set_caption(pickle_name)
             run(config_path)         
         except EOFError as e:
             print("client disconnected")

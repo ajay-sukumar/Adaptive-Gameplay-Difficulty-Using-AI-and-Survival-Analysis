@@ -17,7 +17,6 @@ import signal
 import sys
 import math
 from multiprocessing.connection import Listener
-import multiprocessing
 
 pygame.font.init()  # init font
 
