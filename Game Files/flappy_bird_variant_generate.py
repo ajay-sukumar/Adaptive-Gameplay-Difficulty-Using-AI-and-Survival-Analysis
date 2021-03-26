@@ -28,6 +28,8 @@ FLOOR = 730
 STAT_FONT = pygame.font.SysFont("comicsans", 50)
 END_FONT = pygame.font.SysFont("comicsans", 70)
 DRAW_LINES = False
+pickle_name = None
+
 
 #Initializing Game Variants : change these variables to change the game difficulty
 
@@ -54,7 +56,10 @@ listener = Listener(address, authkey=b'secret password') # start listening to po
 conn = listener.accept()
 gen = 0
 population = 0
-
+file_name_prefix = os.environ.get('file_name_prefix', "")
+if(file_name_prefix!=""):
+    print("Loaded environment variable "+file_name_prefix)
+    file_name_prefix+="_"
 
 fitness_list=[]
 gen_list=[]
@@ -200,6 +205,8 @@ class Pipe():
         :return: None
         """
         self.height = random.randrange(90, 410)
+
+        #self.height = random.randrange(90, 660-GAP)
         self.top = self.height - self.PIPE_TOP.get_height()
         self.bottom = self.height + GAP
 
@@ -397,9 +404,21 @@ def eval_genomes(genomes, config):
 #                 output = nets[birds.index(bird)].activate((bird.y, abs(bird.y - pipes[pipe_ind].height), abs(bird.y - pipes[pipe_ind].bottom)))
 #                 if (output[0] > 0.75):  # we use a tanh activation function so result will be between -1 and 1. if over 0.5 jump  
 #                     bird.jump()
-#                     last_time = current_time                   
-            # send bird location, top pipe location and bottom pipe location and determine from network whether to jump or not
+#                     last_time = current_time                
+
+          # send bird location, top pipe location and bottom pipe location and determine from network whether to jump or not
             output = nets[birds.index(bird)].activate((bird.y, abs(bird.y - pipes[pipe_ind].height), abs(bird.y - pipes[pipe_ind].bottom)))
+            x_distance = abs(pipes[pipe_ind].x - bird.x)
+            tp_y_distance = abs(bird.y - pipes[pipe_ind].height)
+            bp_y_distance = abs(bird.y - pipes[pipe_ind].bottom)
+            tp_distance = math.sqrt(x_distance*2 + tp_y_distance*2)
+            bp_distance = math.sqrt(x_distance*2 + bp_y_distance*2)
+            output = nets[birds.index(bird)].activate((bird.y, tp_distance, bp_distance))
+
+
+            # send bird location, top pipe location and bottom pipe location and determine from network whether to jump or not
+            # output = nets[birds.index(bird)].activate((bird.y, abs(bird.y - pipes[pipe_ind].height), abs(bird.y - pipes[pipe_ind].bottom)))
+
             if (output[0] > 0.5):  # we use a tanh activation function so result will be between -1 and 1. if over 0.5 jump  
                 bird.jump()                   
             
@@ -459,12 +478,11 @@ def eval_genomes(genomes, config):
         if (score > 100):
             print(gen,score,ge[0].fitness,gen)
             # t = str(int(time.time()))
-            f_name = str(GAP)
-            with open('Pickles/'+f_name+".pickle", "wb") as f:
+            with open(file_name_prefix+'Pickles/'+pickle_name+".pickle", "wb") as f:
                  pickle.dump(ge[0],f)
             f.close()
-            trainingResponse([[GAP,SEPARATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,WIN_HEIGHT],f_name+".pickle",score,ge[0].fitness,population.generation])
-            plotGraph('Pickles/'+f_name+".plot")
+            trainingResponse([[GAP,SEPARATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,WIN_HEIGHT],pickle_name+".pickle",score,ge[0].fitness,population.generation])
+            plotGraph(file_name_prefix+'Pickles/'+pickle_name+".plot")
             population.stop()
             break
 
@@ -517,7 +535,7 @@ def plotGraph(plot_file_name):
 
 
 def updateValues(config_path):
-    global WIN,GAP,SEPARATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,WIN_HEIGHT
+    global WIN,GAP,SEPARATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,WIN_HEIGHT,pickle_name
     print (b'connection accepted from', listener.last_accepted)
     # listens for parameter updates from *parameter_update.py*
     while True:
@@ -545,6 +563,10 @@ if __name__ == '__main__':
     here so that the script will run successfully regardless of the
     current working directory.
     """
-    local_dir = os.path.dirname(__file__)
-    config_path = os.path.join(local_dir, 'config-feedforward.txt')
-    updateValues(config_path)
+    try:
+        local_dir = os.path.dirname(__file__)
+        config_path = os.path.join(local_dir, 'config-feedforward.txt')
+        updateValues(config_path)
+    except Exception as e:
+        print(e)
+        time.sleep(20000)
