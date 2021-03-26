@@ -1,6 +1,9 @@
 import csv
 import os
-with open('Pipe_gap_trained_verified_variants.csv') as csv_file:
+parameter = 'Pipe_gap'
+if not os.path.exists(parameter + "_scores"):
+        os.makedirs(parameter + "_scores")
+with open(parameter + '_trained_verified_variants.csv') as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
         for row in csv_reader:
             print(row[0])

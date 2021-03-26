@@ -21,6 +21,7 @@ import multiprocessing
 
 pygame.font.init()  # init font
 
+parameter = "Pipe_gap"
 WIN_WIDTH = 600
 WIN_HEIGHT = 800
 FLOOR = 730
@@ -381,7 +382,13 @@ def eval_genomes(genomes, config,pickle_file):
             bird.move()
 
             # send bird location, top pipe location and bottom pipe location and determine from network whether to jump or not
-            output = nets[birds.index(bird)].activate((bird.y, abs(bird.y - pipes[pipe_ind].height), abs(bird.y - pipes[pipe_ind].bottom)))
+            # output = nets[birds.index(bird)].activate((bird.y, abs(bird.y - pipes[pipe_ind].height), abs(bird.y - pipes[pipe_ind].bottom)))
+            x_distance = abs(pipes[pipe_ind].x - bird.x)
+            tp_y_distance = abs(bird.y - pipes[pipe_ind].height)
+            bp_y_distance = abs(bird.y - pipes[pipe_ind].bottom)
+            tp_distance = math.sqrt(x_distance**2 + tp_y_distance**2)
+            bp_distance = math.sqrt(x_distance**2 + bp_y_distance**2)
+            output = nets[birds.index(bird)].activate((bird.y, tp_distance, bp_distance))
 
             if output[0] > 0.5:  # we use a tanh activation function so result will be between -1 and 1. if over 0.5 jump
                 if time.time()-start>0.125:
@@ -431,7 +438,7 @@ def eval_genomes(genomes, config,pickle_file):
         # break if score gets large enough
         if (score > 100):
             print(gen,score,ge[0].fitness,gen)
-            path = "Pipe_gap_verified_pickles/" + pickle_file
+            path = parameter + "_verified_pickles/" + pickle_file
             with open(path, "wb") as f:
                 pickle.dump(ge[0], f)
             trainingResponse([[GAP,SEPERATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY],pickle_file,score,ge[0].fitness])
@@ -453,7 +460,7 @@ def run(config_file,pickle_file):
                          neat.DefaultSpeciesSet, neat.DefaultStagnation,
                          config_file)
 
-    genome_path = './Pipe_gap_pickles/'+ pickle_file
+    genome_path = './' + parameter + '_pickles/'+ pickle_file
     with open(genome_path, "rb") as f:
         genome = pickle.load(f)
     genomes = [(1, genome)]

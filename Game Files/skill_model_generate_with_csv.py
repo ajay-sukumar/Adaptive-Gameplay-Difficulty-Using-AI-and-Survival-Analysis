@@ -1,10 +1,15 @@
 
 """
-    1)simulate game variant received from parameter_update.py and check if it is playable with click limit (playable only if it reach score:100 or fitness:1800)
-    2)After checking playability necessary files are sent to game parameter_update.py
-    3)If playable the data is saved to respective files else data is discarded.
-    4)Then new variant is received. 
-    follow 1,2,3,4 until required number of playable variants are generated.
+ Generate score distribution for a set of variants for given difficulty levels.
+ * Four types of error models used.
+   1) Simple probability model - A random value between 0 and 1 is chosen and if it is greater than the given difficulty value the bird performs a jump.
+   2) Normal distribution model - A list of values drawn from a normal distribution of zero mean and a standard deviation proportional to the difficulty is created.
+      For each value of the nn output, a random value is drawn from this list and added to it.
+   3) Uniform distribution model - Same as normal distribution model but here a uniform distribution is used.
+   4) Normal distribution-Probability model - The same procedure as normal distribution model is used initially.
+      A difficulty value is set between 0 and 1.
+      A random value is drawn from the list created using normal distribution(Error value). Also a random value is chosen between 0 and 1 and if this value is less than the 
+      difficulty value the error value is added to the output of nn.
 """
 import pygame
 import random
@@ -22,7 +27,7 @@ import time
 
 pygame.font.init()  # init font
 
-
+parameter = 'Pipe_gap'
 WIN_WIDTH = 600
 WIN_HEIGHT = 800
 FLOOR = 730
@@ -50,17 +55,17 @@ base_img = pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","base.
 pickle_file=""
 gen = 0
 score = 0
-sample = 20
-difficulties = [0.7]
-j_error_list = np.random.normal(0, 0.8, 1000) ######################################################
+sample = 30
+
+#Normal distribution-Probability model
+difficulties = [0.5]
+j_error_list = np.random.normal(0, 0.8, 1000) #Normal distribution model - If the list is used varying standard deviation alone
+#j_error_list = np.random.uniform(-1,1) #Uniform distribution model
 j_error_parameters = [0,0.8,1000,difficulties]
+
 score_list = []
 for i in difficulties:   # for n probability
     score_list.append([])
-
-
-# def trainingResponse(params = None):
-#     conn.send(params)
 
 class Bird:
     """
@@ -386,8 +391,27 @@ def eval_genomes(genomes, config,pickle_file,difficulty):
             # ge[x].fitness += 0.1
             bird.move()
 
+
+            #Simple probabilty model 
+            #difficulty = 0.6
+            #j_val = random.uniform(0,1)
+            # if j_val>difficulty:
+            #     output = nets[birds.index(bird)].activate((bird.y, abs(bird.y - pipes[pipe_ind].height), abs(bird.y - pipes[pipe_ind].bottom)))
+            #     if output[0] > 0.5:  # we use a tanh activation function so result will be between -1 and 1. if over 0.5 jump
+            #     if time.time()-start>0.125:
+            #         start = time.time()
+            #         bird.jump()
+
             # send bird location, top pipe location and bottom pipe location and determine from network whether to jump or not
-            output = nets[birds.index(bird)].activate((bird.y, abs(bird.y - pipes[pipe_ind].height), abs(bird.y - pipes[pipe_ind].bottom)))
+            # output = nets[birds.index(bird)].activate((bird.y, abs(bird.y - pipes[pipe_ind].height), abs(bird.y - pipes[pipe_ind].bottom)))
+            x_distance = abs(pipes[pipe_ind].x - bird.x)
+            tp_y_distance = abs(bird.y - pipes[pipe_ind].height)
+            bp_y_distance = abs(bird.y - pipes[pipe_ind].bottom)
+            tp_distance = math.sqrt(x_distance**2 + tp_y_distance**2)
+            bp_distance = math.sqrt(x_distance**2 + bp_y_distance**2)
+            output = nets[birds.index(bird)].activate((bird.y, tp_distance, bp_distance))
+
+            #Normal distribution-Probability model
             error_prob = random.uniform(0,1)
             if error_prob<difficulty:
                 j_error = random.choice(j_error_list)  
@@ -422,7 +446,6 @@ def eval_genomes(genomes, config,pickle_file,difficulty):
 
         if add_pipe:
             score += 1
-            # can add this line to give more reward for passing through a pipe (not required)
             # for genome in ge:
             #     genome.fitness += 5
             pipes.append(Pipe(WIN_WIDTH))
@@ -440,14 +463,6 @@ def eval_genomes(genomes, config,pickle_file,difficulty):
         
         # break if score gets large enough
         if (score > 100):
-            # print(gen,score,ge[0].fitness,gen)
-            # t = time.strftime("%H%M%S", time.localtime())
-            # file = pickle_file + ".pickle"
-            # path = "Verified_Pickles/" + file
-            # with open(path, "wb") as f:
-            #     pickle.dump(ge[0], f)
-            # trainingResponse([[GAP,SEPERATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,t],file,score,ge[0].fitness])
-            # reached_limit = False
             break
     print("score: ",score,difficulty)
     score_list[difficulties.index(difficulty)].append(score) # for n probability
@@ -464,7 +479,7 @@ def run(config_file,pickle_file):
                          neat.DefaultSpeciesSet, neat.DefaultStagnation,
                          config_file)
 
-    genome_path = './Pipe_gap_verified_pickles/'+ pickle_file
+    genome_path = './' + parameter + '_verified_pickles/'+ pickle_file
     with open(genome_path, "rb") as f:
         genome = pickle.load(f)
     genomes = [(1, genome)]
@@ -472,33 +487,14 @@ def run(config_file,pickle_file):
     for difficulty in difficulties:
         for i in range(sample):
             score = eval_genomes(genomes,config,pickle_file,difficulty)
-        # print("score: ",score,difficulty)
-    # df2= pd.DataFrame({'0.6':list1,'0.7':list2,'0.8':list3,'0.9':list4},columns=['0.6','0.7','0.8','0.9'])
-    pipe_gap_csv = './Pipe_gap_scores/' + pickle_file + '.csv'
+
+    pipe_gap_csv = './' + parameter + '_scores/' + pickle_file + '.csv'
     df2= pd.DataFrame(dict(zip(difficulties, score_list)),columns=difficulties) # for n probability
     df2.to_csv(pipe_gap_csv, mode='a', header=False, index = False)
-    # Add a stdout reporter to show progress in the terminal.
-    # p.add_reporter(neat.StdOutReporter(True))
-    # stats = neat.StatisticsReporter()
-    # p.add_reporter(stats)
-    #p.add_reporter(neat.Checkpointer(5))
 
-    # Run for up to 50 generations.
     
-    # winner = p.run(eval_genomes, 50)
-    # with open("Verified.pickle", "wb") as f:
-    #     pickle.dump(winner, f)
     f.close()
-        
-    # show final stats
-    # if(reached_limit):
-    #     trainingResponse([score])
 
-# def exit_Training():
-#     print('Training  closed')
-#     listener.close()
-#     conn.close()
-#     sys.exit(0)
 
 def read_variant_data(config_path):
     global WIN,GAP,SEPERATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY
@@ -508,7 +504,7 @@ def read_variant_data(config_path):
             line = sys.argv[1:]
             line = GAP,SEPERATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY= [ int(i) for i in sys.argv[1:-1]]
             pickle_file = sys.argv[-1]
-            pipe_gap_csv = './Pipe_gap_scores/' + pickle_file + '.csv'
+            pipe_gap_csv = './' + parameter + '_scores/' + pickle_file + '.csv'
             print("Variant parameters ",[GAP,SEPERATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY])
             with open(pipe_gap_csv,'a') as fd:
                 csv_writer = csv.writer(fd, delimiter=',', lineterminator = '\n')
@@ -534,12 +530,3 @@ if __name__ == '__main__':
     local_dir = os.path.dirname(__file__)
     config_path = os.path.join(local_dir, 'config-feedforward.txt')
     read_variant_data(config_path)
-
-
-
-
-
-
-
-
-    Task - The multiprocessing framework was implemented in flappy_bird_variant_generate.py, flappy_bird_ideal_tune.py, skill_model_generate_csv

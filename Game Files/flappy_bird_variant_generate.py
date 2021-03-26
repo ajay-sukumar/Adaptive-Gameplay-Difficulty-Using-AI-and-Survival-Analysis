@@ -30,7 +30,7 @@ END_FONT = pygame.font.SysFont("comicsans", 70)
 DRAW_LINES = False
 
 #Initializing Game Variants : change these variables to change the game difficulty
-
+parameter = "Pipe_gap"
 GAP = 250 #SEPARATION <150,250> 250
 SEPARATION =  100#SEPARATION <0,200> 100
 VELOCITY = 60 #VELOCITY <20,60>
@@ -399,7 +399,15 @@ def eval_genomes(genomes, config):
 #                     bird.jump()
 #                     last_time = current_time                   
             # send bird location, top pipe location and bottom pipe location and determine from network whether to jump or not
-            output = nets[birds.index(bird)].activate((bird.y, abs(bird.y - pipes[pipe_ind].height), abs(bird.y - pipes[pipe_ind].bottom)))
+
+            x_distance = abs(pipes[pipe_ind].x - bird.x)
+            tp_y_distance = abs(bird.y - pipes[pipe_ind].height)
+            bp_y_distance = abs(bird.y - pipes[pipe_ind].bottom)
+            tp_distance = math.sqrt(x_distance**2 + tp_y_distance**2)
+            bp_distance = math.sqrt(x_distance**2 + bp_y_distance**2)
+            output = nets[birds.index(bird)].activate((bird.y, tp_distance, bp_distance))
+            # output = nets[birds.index(bird)].activate((bird.y, abs(bird.y - pipes[pipe_ind].height), abs(bird.y - pipes[pipe_ind].bottom)))
+            
             if (output[0] > 0.5):  # we use a tanh activation function so result will be between -1 and 1. if over 0.5 jump  
                 bird.jump()                   
             
@@ -460,11 +468,11 @@ def eval_genomes(genomes, config):
             print(gen,score,ge[0].fitness,gen)
             # t = str(int(time.time()))
             f_name = str(GAP)
-            with open('Pipe_gap_pickles/'+f_name+".pickle", "wb") as f:
+            with open(parameter + '_pickles/'+f_name+".pickle", "wb") as f:
                  pickle.dump(ge[0],f)
             f.close()
             trainingResponse([[GAP,SEPARATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,WIN_HEIGHT],f_name+".pickle",score,ge[0].fitness,population.generation])
-            plotGraph('Pipe_gap_pickles/'+f_name+".plot")
+            plotGraph(parameter + '_pickles/'+f_name+".plot")
             population.stop()
             break
 

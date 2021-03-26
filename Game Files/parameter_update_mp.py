@@ -34,7 +34,7 @@ variant_limit = 0
 ideal_sim_mode =  input("Modes\n1 : ideal simulation mode \n2 : variant generation\nSelect the mode:") == "1" #decides whether to simulate variants or ganrate variants.
 threads = []
 system_call_command=""
-
+parameter = "Pipe_gap"
 def generate(port,msg,f_writer):
     os.system(system_call_command+str(port))
     while(True):
@@ -65,30 +65,30 @@ def generate(port,msg,f_writer):
             break
 
 if(ideal_sim_mode):
-    if(not os.path.exists("Pipe_gap_trained_variants.csv")):
-        print("No such file exist: Pipe_gap_trained_variants.csv")
+    if(not os.path.exists(parameter + "_trained_variants.csv")):
+        print('No such file exist: {}_trained_variants.csv'.format(parameter))
         exit()
-    if not os.path.exists("Pipe_gap_pickles"):
-        print("No such directory exist: Pipe_gap_pickles")
+    if not os.path.exists(parameter + "_pickles"):
+        print("No such directory exist: {}_pickles".format(parameter))
         exit()
-    if not os.path.exists("Pipe_gap_verified_pickles"):
-        os.makedirs("Pipe_gap_verified_Pickles")
-        print("directory created: Pipe_gap_verified_pickles")
-    f1 = open('Pipe_gap_trained_verified_variants.csv',mode='a')
+    if not os.path.exists(parameter + "_verified_pickles"):
+        os.makedirs(parameter + "_verified_Pickles")
+        print("directory created: {}_verified_pickles".format(parameter))
+    f1 = open(parameter + '_trained_verified_variants.csv',mode='a')
     f_writer = csv.writer(f1,delimiter=',', lineterminator = '\n') # file to save variants
-    f2 = open('Pipe_gap_trained_variants.csv',mode='r')
+    f2 = open(parameter + '_trained_variants.csv',mode='r')
     f_reader = csv.reader(f2,delimiter=',')
-    if not os.path.exists("Pipe_gap_pickles"):
-        print("No such directory: Pipe_gap_pickles")
+    if not os.path.exists(parameter + "_pickles"):
+        print("No such directory: {}_pickles".format(parameter))
         exit()
     system_call_command = "start py flappy_bird_ideal_tune.py "
 
 
 else: 
-    if not os.path.exists("Pipe_gap_pickles"):
-        os.makedirs("Pipe_gap_pickles")
-        print("directory created: Pipe_gap_pickles")
-    f1 = open('Pipe_gap_trained_variants.csv',mode='a')
+    if not os.path.exists(parameter + "_pickles"):
+        os.makedirs(parameter + "_pickles")
+        print("directory created: {}_pickles".format(parameter))
+    f1 = open(parameter + '_trained_variants.csv',mode='a')
     f_writer = csv.writer(f1,delimiter=',', lineterminator = '\n') # file to save variants
     variant_limit = int(input("number of variants to generate:"))
     system_call_command = "start py flappy_bird_variant_generate.py "
@@ -102,7 +102,7 @@ while(ideal_sim_mode or  i<variant_limit):
         if(ideal_sim_mode):
             msg = next(f_reader)
         else:
-            msg = [150+i*10,100,60,9,-9,3,800]
+            msg = [150,100,60,9,-9,3,800]
             # msg  = [random.randint(150,250),random.randint(0,200),60,random.randint(4,13),random.randint(-12,-5),3,random.randint(350,950)]
         t1 = threading.Thread(target=generate, args=(port+i,msg,f_writer,)) 
         t1.start()
