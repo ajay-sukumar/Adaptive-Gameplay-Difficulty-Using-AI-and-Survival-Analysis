@@ -1,6 +1,4 @@
 """
-    
-
     Modes
         I.variant generate mode
         1)genrate a random variant within the limits
@@ -27,7 +25,6 @@
 
         III.Auto
         completes ideal simulation mode after variant generate mode 
-
 """
 
 from multiprocessing.connection import Client
@@ -36,12 +33,13 @@ import random
 import csv
 import os
 import threading
-port = 6006
+port = 7006
 operation_mode  = 0 #decides whether to simulate variants or ganrate variants or auto(genrate variants then simulate)
 threads = []
-terminal_start_command  = "start python" if os.name == 'nt' else "gnome-terminal -x"
+terminal_start_command  = "start " if os.name == 'nt' else "gnome-terminal -x"
 slave_file_name = None
-file_name_prefix = "SEP" 
+file_name_prefix = "GAP" 
+
 if(file_name_prefix!=None):
     print("Setting environment variable " + file_name_prefix)
     os.environ["file_name_prefix"] = file_name_prefix # prefix for separate folder for separate parameter testing
@@ -78,14 +76,19 @@ def generate(port,msg,f_writer):
             break
 
 def pickle_picker():
-    with open(file_name_prefix+'trained_verified_variants.csv') as csv_file:
+    if not os.path.exists(file_name_prefix+"/"+file_name_prefix+"Scores"):
+        os.makedirs(file_name_prefix+"/"+file_name_prefix+"Scores")
+        print("directory created: "+file_name_prefix+"/"+file_name_prefix+"Scores")
+    i=0
+    with open(file_name_prefix+"/"+file_name_prefix+'trained_verified_variants.csv') as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
         for row in csv_reader:
             print(row[0])
             if (row[0]=="Failed"):
                 print("skipping failed variant")
             else:    
-                os.system(terminal_start_command+" python skill_model_generate_with_csv.py "+" ".join(row[0][1:-1].split(", "))+" "+row[1])
+                os.system(terminal_start_command+" python skill_model_generate_dyna_diff.py "+" ".join(row[0][1:-1].split(", "))+" "+row[1]+" "+str(i))
+            i+=1
 def main(ideal_sim_mode):
     global slave_file_name
     f1 = None
@@ -93,31 +96,33 @@ def main(ideal_sim_mode):
     f_writer = None
     f_reader = None
     variant_limit = 0
+    if not os.path.exists(file_name_prefix):
+        os.makedirs(file_name_prefix)
     if(ideal_sim_mode):
         print("simulation with delay started")
-        if(not os.path.exists(file_name_prefix+"trained_variants.csv")):
-            print("No such file exist: "+file_name_prefix+"trained_variants.csv")
+        if(not os.path.exists(file_name_prefix+"/"+file_name_prefix+"trained_variants.csv")):
+            print("No such file exist: "+file_name_prefix+"/"+file_name_prefix+"trained_variants.csv")
             exit()
-        if not os.path.exists(file_name_prefix+"Pickles"):
-            print("No such directory exist: "+file_name_prefix+"Pickles")
+        if not os.path.exists(file_name_prefix+"/"+file_name_prefix+"Pickles"):
+            print("No such directory exist: "+file_name_prefix+"/"+file_name_prefix+"Pickles")
             exit()
-        if not os.path.exists(file_name_prefix+"Verified_Pickles"):
-            os.makedirs(file_name_prefix+"Verified_Pickles")
-            print("directory created: "+file_name_prefix+"Verified_Pickles")
-        f1 = open(file_name_prefix+'trained_verified_variants.csv',mode='a')
+        if not os.path.exists(file_name_prefix+"/"+file_name_prefix+"Verified_Pickles"):
+            os.makedirs(file_name_prefix+"/"+file_name_prefix+"Verified_Pickles")
+            print("directory created: "+file_name_prefix+"/"+file_name_prefix+"Verified_Pickles")
+        f1 = open(file_name_prefix+"/"+file_name_prefix+'trained_verified_variants.csv',mode='a')
         f_writer = csv.writer(f1,delimiter=',', lineterminator = '\n') # file to save variants
-        f2 = open(file_name_prefix+'trained_variants.csv',mode='r')
+        f2 = open(file_name_prefix+"/"+file_name_prefix+'trained_variants.csv',mode='r')
         f_reader = csv.reader(f2,delimiter=',')
-        if not os.path.exists(file_name_prefix+"Pickles"):
-            print("No such directory: "+file_name_prefix+"Pickles")
+        if not os.path.exists(file_name_prefix+"/"+file_name_prefix+"Pickles"):
+            print("No such directory: "+file_name_prefix+"/"+file_name_prefix+"Pickles")
             exit()
         slave_file_name = "python flappy_bird_ideal_tune.py"
     else: 
         print("variant genration started")
-        if not os.path.exists(file_name_prefix+"Pickles"):
-            os.makedirs(file_name_prefix+"Pickles")
-            print("directory created: "+file_name_prefix+"Pickles")
-        f1 = open(file_name_prefix+'trained_variants.csv',mode='a')
+        if not os.path.exists(file_name_prefix+"/"+file_name_prefix+"Pickles"):
+            os.makedirs(file_name_prefix+"/"+file_name_prefix+"Pickles")
+            print("directory created: "+file_name_prefix+"/"+file_name_prefix+"Pickles")
+        f1 = open(file_name_prefix+"/"+file_name_prefix+'trained_variants.csv',mode='a')
         f_writer = csv.writer(f1,delimiter=',', lineterminator = '\n') # file to save variants
         variant_limit = int(input("number of variants to generate:"))
         slave_file_name = "python flappy_bird_variant_generate.py"
@@ -126,11 +131,12 @@ def main(ideal_sim_mode):
     i = 0
     while(ideal_sim_mode or  i<variant_limit):
         try:
-            # [GAP,SEPARATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,WIN_HEIGHT] variants are genrated and send to the port
+            # [GAP,SEPARATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,WIN_HEIGHT] variants are genrated and send to the port [200,100,60,9,-9,3,800]
             if(ideal_sim_mode):
                 msg = next(f_reader)
             else:
-                msg = [250,80+i*20,60,9,-9,3,800]
+                msg = [220,100,60,9,-21,8,800]
+                # msg = [200,100,60,5+i,-9,3,800]
                 # msg  = [random.randint(150,250),random.randint(0,200),60,random.randint(4,13),random.randint(-12,-5),3,random.randint(350,950)]
             t1 = threading.Thread(target=generate, args=(port+i,msg,f_writer,)) 
             t1.start()
@@ -151,9 +157,7 @@ def main(ideal_sim_mode):
         f2 = None
     print("completed")
 
-
-
-operation_mode =  input("Modes\n1 : ideal simulation mode \n2 : variant generation\n3 : auto\nSelect the mode:") #decides whether to simulate variants or ganrate variants.
+operation_mode =  input("Modes\n0 : Pickle Picker \n1 : ideal simulation mode \n2 : variant generation\n3 : auto\nSelect the mode:") #decides whether to simulate variants or ganrate variants.
 
 if(operation_mode=="1"):
     main(True)
@@ -164,4 +168,3 @@ elif(operation_mode=="0"):
 else:
     main(False)
     main(True)
-    pickle_picker()

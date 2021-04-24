@@ -1,4 +1,3 @@
-
 """
     1)simulate game variant received from parameter_update.py and check if it is playable.(Playable only if it reach score:100 or fitness:1800)
     2)After checking playability necessary files are sent to game parameter_update.py
@@ -13,12 +12,9 @@ import time
 import neat
 import visualize
 import pickle
-import threading
-import signal
 import sys
 import math
 from multiprocessing.connection import Listener
-import multiprocessing
 import matplotlib.pyplot as plt 
 pygame.font.init()  # init font
 
@@ -32,7 +28,6 @@ pickle_name = None
 
 
 #Initializing Game Variants : change these variables to change the game difficulty
-
 GAP = 250 #SEPARATION <150,250> 250
 SEPARATION =  100#SEPARATION <0,200> 100
 VELOCITY = 60 #VELOCITY <20,60>
@@ -44,23 +39,17 @@ WIN_HEIGHT = 800 #WORLD_HEIGHT <650,950>
 FLOOR = math.floor(730 * WIN_HEIGHT / 800)
 WIN = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
 PORT = 6006
-if(len(sys.argv)>1):
-    PORT = int(sys.argv[1])
 pygame.display.set_caption("Flappy Bird")
 pipe_img = pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","pipe.png")).convert_alpha())
 bg_img = pygame.transform.scale(pygame.image.load(os.path.join("imgs","bg.png")).convert_alpha(), (600, 900))
 bird_images = [pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","bird" + str(x) + ".png"))) for x in range(1,4)]
 base_img = pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","base.png")).convert_alpha())
-address = ('localhost', PORT)     # family is deduced to be 'AF_INET' 
-listener = Listener(address, authkey=b'secret password') # start listening to port 6006, port number should be same as in *parameter_update.py*
-conn = listener.accept()
+
 gen = 0
 population = 0
-file_name_prefix = os.environ.get('file_name_prefix', "")
-if(file_name_prefix!=""):
-    print("Loaded environment variable "+file_name_prefix)
-    file_name_prefix+="_"
-
+file_name_prefix = None
+conn = None
+listener = None
 fitness_list=[]
 gen_list=[]
 population_list=[]
@@ -404,21 +393,17 @@ def eval_genomes(genomes, config):
 #                 output = nets[birds.index(bird)].activate((bird.y, abs(bird.y - pipes[pipe_ind].height), abs(bird.y - pipes[pipe_ind].bottom)))
 #                 if (output[0] > 0.75):  # we use a tanh activation function so result will be between -1 and 1. if over 0.5 jump  
 #                     bird.jump()
-#                     last_time = current_time                
+#                     last_time = current_time                   
+            # send bird location, top pipe location and bottom pipe location and determine from network whether to jump or not
 
-          # send bird location, top pipe location and bottom pipe location and determine from network whether to jump or not
-            output = nets[birds.index(bird)].activate((bird.y, abs(bird.y - pipes[pipe_ind].height), abs(bird.y - pipes[pipe_ind].bottom)))
             x_distance = abs(pipes[pipe_ind].x - bird.x)
             tp_y_distance = abs(bird.y - pipes[pipe_ind].height)
             bp_y_distance = abs(bird.y - pipes[pipe_ind].bottom)
-            tp_distance = math.sqrt(x_distance*2 + tp_y_distance*2)
-            bp_distance = math.sqrt(x_distance*2 + bp_y_distance*2)
+            tp_distance = math.sqrt(x_distance**2 + tp_y_distance**2)
+            bp_distance = math.sqrt(x_distance**2 + bp_y_distance**2)
             output = nets[birds.index(bird)].activate((bird.y, tp_distance, bp_distance))
-
-
-            # send bird location, top pipe location and bottom pipe location and determine from network whether to jump or not
             # output = nets[birds.index(bird)].activate((bird.y, abs(bird.y - pipes[pipe_ind].height), abs(bird.y - pipes[pipe_ind].bottom)))
-
+            
             if (output[0] > 0.5):  # we use a tanh activation function so result will be between -1 and 1. if over 0.5 jump  
                 bird.jump()                   
             
@@ -478,11 +463,11 @@ def eval_genomes(genomes, config):
         if (score > 100):
             print(gen,score,ge[0].fitness,gen)
             # t = str(int(time.time()))
-            with open(file_name_prefix+'Pickles/'+pickle_name+".pickle", "wb") as f:
+            with open(file_name_prefix+"/"+file_name_prefix+'Pickles/'+pickle_name+".pickle", "wb") as f:
                  pickle.dump(ge[0],f)
             f.close()
             trainingResponse([[GAP,SEPARATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY,WIN_HEIGHT],pickle_name+".pickle",score,ge[0].fitness,population.generation])
-            plotGraph(file_name_prefix+'Pickles/'+pickle_name+".plot")
+            plotGraph(file_name_prefix+"/"+file_name_prefix+'Pickles/'+pickle_name+".plot")
             population.stop()
             break
 
@@ -564,6 +549,15 @@ if __name__ == '__main__':
     current working directory.
     """
     try:
+        file_name_prefix = os.environ.get('file_name_prefix', "")
+        if(file_name_prefix!=""):
+            print("Loaded environment variable "+file_name_prefix)
+            file_name_prefix+="_"
+        if(len(sys.argv)>1):
+            PORT = int(sys.argv[1])
+        address = ('localhost', PORT)     # family is deduced to be 'AF_INET' 
+        listener = Listener(address, authkey=b'secret password') # start listening to port 6006, port number should be same as in *parameter_update.py*
+        conn = listener.accept()
         local_dir = os.path.dirname(__file__)
         config_path = os.path.join(local_dir, 'config-feedforward.txt')
         updateValues(config_path)

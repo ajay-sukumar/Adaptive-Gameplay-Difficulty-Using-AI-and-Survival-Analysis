@@ -29,15 +29,16 @@ f2 = NONE
 f_writer = NONE
 f_reader = NONE
 port = 6006
+parameter = ""
 ideal_sim_mode = True #decides whether to simulate variants or ganrate variants.
 ideal_sim_mode =  input("Modes\n 1 : ideal simulation mode \n2 : variant generation\nSelect the mode:") == "1" #decides whether to simulate variants or ganrate variants.
 
 if(ideal_sim_mode):
-    if(not os.path.exists("Pipe_gap_trained_variants.csv")):
-        print("No such file exist: Pipe_gap_trained_variants.csv")
+    if(not os.path.exists(parameter + "_trained_variants.csv")):
+        print('No such file exist: {}_trained_variants.csv'.format(parameter))
         exit()
-    if not os.path.exists("Pipe_gap_pickles"):
-        print("No such directory exist: Pipe_gap_pickles")
+    if not os.path.exists(parameter + "_pickles"):
+        print("No such directory exist: {}_pickles".format(parameter))
         exit()
     if not os.path.exists("Pipe_gap_verified_Pickles"):
         os.makedirs("Pipe_gap_verified_Pickles")
@@ -56,10 +57,10 @@ if(ideal_sim_mode):
 
 
 else: 
-    if not os.path.exists("Pipe_gap_pickles"):
-        os.makedirs("Pipe_gap_pickles")
-        print("directory created: Pipe_gap_pickles")
-    f1 = open('Pipe_gap_trained_variants.csv',mode='a')
+    if not os.path.exists(parameter + "_pickles"):
+        os.makedirs(parameter + "_pickles")
+        print("directory created: {}_pickles".format(parameter))
+    f1 = open(parameter + '_trained_variants.csv',mode='a')
     f_writer = csv.writer(f1,delimiter=',', lineterminator = '\n') # file to save variants
     variant_limit = int(input("number of variants to generate:"))
     system_call_command = "gnome-terminal -x python flappy_bird_variant_generate.py "

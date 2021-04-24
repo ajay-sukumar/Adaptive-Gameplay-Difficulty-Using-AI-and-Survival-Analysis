@@ -27,7 +27,6 @@ import time
 
 pygame.font.init()  # init font
 
-
 WIN_WIDTH = 600
 WIN_HEIGHT = 800
 FLOOR = 730
@@ -48,6 +47,7 @@ file_name_prefix = os.environ.get('file_name_prefix', "")
 if(file_name_prefix!=""):
     print("Loaded environment variable "+file_name_prefix)
     file_name_prefix+="_"
+
 # reached_limit = True
 pipe_img = pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","pipe.png")).convert_alpha())
 bg_img = pygame.transform.scale(pygame.image.load(os.path.join("imgs","bg.png")).convert_alpha(), (600, 900))
@@ -59,13 +59,15 @@ base_img = pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","base.
 pickle_file=""
 gen = 0
 score = 0
-sample = 20
+sample = 600
 
 #Normal distribution-Probability model
-difficulties = [0.7]
-j_error_list_normal = np.random.normal(0, 0.8, 1000) #Normal distribution model - If the list is used varying standard deviation alone
-j_error_list_uniform = np.random.uniform(-1,1) #Uniform distribution model
-j_error_parameters = [0,0.8,1000,difficulties]
+ulimit = 1.5
+llimit = -1.5
+difficulties = [0.9]
+j_error_list_normal = None #Normal distribution model - If the list is used varying standard deviation alone
+j_error_list_uniform = np.random.uniform(llimit,ulimit,1000) #Uniform distribution model
+j_error_parameters = None
 
 score_list = []
 for i in difficulties:   # for n probability
@@ -379,7 +381,7 @@ def eval_genomes(genomes, config,pickle_file,difficulty):
     run = True
     start = time.time()
     while run and len(birds) > 0:
-        clock.tick(30)
+        clock.tick(40)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -408,37 +410,19 @@ def eval_genomes(genomes, config,pickle_file,difficulty):
             #         start = time.time()
             #         bird.jump()
 
-
-
             # send bird location, top pipe location and bottom pipe location and determine from network whether to jump or not
-            output = nets[birds.index(bird)].activate((bird.y, abs(bird.y - pipes[pipe_ind].height), abs(bird.y - pipes[pipe_ind].bottom)))
+            # output = nets[birds.index(bird)].activate((bird.y, abs(bird.y - pipes[pipe_ind].height), abs(bird.y - pipes[pipe_ind].bottom)))
             x_distance = abs(pipes[pipe_ind].x - bird.x)
             tp_y_distance = abs(bird.y - pipes[pipe_ind].height)
             bp_y_distance = abs(bird.y - pipes[pipe_ind].bottom)
-            tp_distance = math.sqrt(x_distance*2 + tp_y_distance*2)
-            bp_distance = math.sqrt(x_distance*2 + bp_y_distance*2)
+            tp_distance = math.sqrt(x_distance**2 + tp_y_distance**2)
+            bp_distance = math.sqrt(x_distance**2 + bp_y_distance**2)
             output = nets[birds.index(bird)].activate((bird.y, tp_distance, bp_distance))
-
-
-            # send bird location, top pipe location and bottom pipe location and determine from network whether to jump or not
-            # output = nets[birds.index(bird)].activate((bird.y, abs(bird.y - pipes[pipe_ind].height), abs(bird.y - pipes[pipe_ind].bottom)))
-
-            #simple normal distribution model
-            # j_error = random.choice(j_error_list_normal)  
-            # output[0]+=j_error
-
-
-            #uniform distribution with probability
-            # error_prob = random.uniform(0,1)
-            # if error_prob<difficulty:
-            #     j_error = random.choice(j_error_list_uniform)  
-            #     output[0]+=j_error
-
 
             #Normal distribution-Probability model
             error_prob = random.uniform(0,1)
             if error_prob<difficulty:
-                j_error = random.choice(j_error_list_normal)  
+                j_error = random.choice(j_error_list_uniform)  
                 output[0]+=j_error
 
             if output[0] > 0.5:  # we use a tanh activation function so result will be between -1 and 1. if over 0.5 jump
@@ -503,7 +487,7 @@ def run(config_file,pickle_file):
                          neat.DefaultSpeciesSet, neat.DefaultStagnation,
                          config_file)
 
-    genome_path = file_name_prefix+'Verified_Pickles/'+ pickle_file
+    genome_path = file_name_prefix+"/"+file_name_prefix+'Verified_Pickles/'+ pickle_file
     with open(genome_path, "rb") as f:
         genome = pickle.load(f)
     genomes = [(1, genome)]
@@ -511,42 +495,36 @@ def run(config_file,pickle_file):
     for difficulty in difficulties:
         for i in range(sample):
             score = eval_genomes(genomes,config,pickle_file,difficulty)
-
-    csv_file_name = file_name_prefix+'Verified_Pickles/' + pickle_file + '.csv'
     df2= pd.DataFrame(dict(zip(difficulties, score_list)),columns=difficulties) # for n probability
     df2.to_csv(csv_file_name, mode='a', header=False, index = False)
-
-    
     f.close()
 
 
 def read_variant_data(config_path):
-    global WIN,GAP,SEPERATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY
-    try:
-        if(len(sys.argv)>2):
-            print(sys.argv)
-            line = sys.argv[1:]
-            line = GAP,SEPERATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY= [ int(i) for i in sys.argv[1:-1]]
-            pickle_file = sys.argv[-1]
-            pygame.display.set_caption(pickle_file)
+    global WIN,GAP,SEPERATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY, csv_file_name,j_error_list_normal,j_error_parameters
+    # j_error_list_normal = np.random.normal(0, sd, 1000)
+    j_error_parameters = [llimit, ulimit, 1000,difficulties]
+    if(len(sys.argv)>2):
+        print(sys.argv)
+        line = sys.argv[1:]
+        line = GAP,SEPERATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY= [ int(i) for i in sys.argv[1:-2]]
+        pickle_file = sys.argv[-2] 
+        pygame.display.set_caption(",".join(sys.argv[1:-2]))
+        # csv_file_name = file_name_prefix+"/"+file_name_prefix+"Scores/"+ pickle_file+ sys.argv[-1]+"_" +str(sd)+'.csv'
+        csv_file_name = file_name_prefix+"/"+file_name_prefix+"Scores/"+ pickle_file+ sys.argv[-1]+'.csv'
+        print("Variant parameters ",[GAP,SEPERATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY],csv_file_name)
+        with open(csv_file_name,'a') as fd:
+            csv_writer = csv.writer(fd, delimiter=',', lineterminator = '\n')
+            csv_writer.writerow(line)
+            csv_writer.writerow(j_error_parameters)
+            csv_writer.writerow(difficulties)
+        for i in score_list: # for n probability
+            i.clear()
+        run(config_path,pickle_file)      
+    else:
+        print("not enough parameters")
 
-            csv_file_name = file_name_prefix+'Verified_Pickles/' + pickle_file + '.csv'
-            print("Variant parameters ",[GAP,SEPERATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY])
-            with open(csv_file_name,'a') as fd:
-                csv_writer = csv.writer(fd, delimiter=',', lineterminator = '\n')
-                csv_writer.writerow(line)
-                csv_writer.writerow(j_error_parameters)
-                csv_writer.writerow(difficulties)
-            for i in score_list: # for n probability
-                i.clear()
-            run(config_path,pickle_file)      
-        else:
-            print("not enough parameters")
-    except Exception as e:
-        print(e)
-
-        
-
+    
 if __name__ == '__main__':
     """
     Determine path to configuration file. This path manipulation is

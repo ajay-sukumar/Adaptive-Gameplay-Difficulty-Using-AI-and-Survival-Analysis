@@ -33,10 +33,10 @@ bird_images = [pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","b
 base_img = pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","base.png")).convert_alpha())
 
 # gen = 0
-PIPE_GAP = 150 #(150,250)
-SEPARATION = 250 #(50,350)
-PIPE_VELOCITY = 12 #(5,20)
-JUMP_VELOCITY = -8 #(-12,-4)
+PIPE_GAP = 180 #(150,250)
+SEPARATION = 100 #(50,350)
+PIPE_VELOCITY = 9 #(5,20)
+JUMP_VELOCITY = -21 #(-12,-4)
 VELOCITY = 60
 if(len(sys.argv)>5):
     print("using CLA")
@@ -85,7 +85,7 @@ class Bird:
         self.tick_count += 1
 
         # for downward acceleration
-        displacement = self.vel*(self.tick_count) + 0.5*(3)*(self.tick_count)**2  # calculate displacement
+        displacement = self.vel*(self.tick_count) + 0.5*8*(self.tick_count)**2  # calculate displacement
 
         # terminal velocity
         if displacement >= 16:

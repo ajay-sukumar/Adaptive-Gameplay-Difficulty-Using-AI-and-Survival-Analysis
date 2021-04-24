@@ -12,8 +12,6 @@ import time
 import neat
 import visualize
 import pickle
-import threading
-import signal
 import sys
 import math
 from multiprocessing.connection import Listener
@@ -43,18 +41,9 @@ bg_img = pygame.transform.scale(pygame.image.load(os.path.join("imgs","bg.png"))
 bird_images = [pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","bird" + str(x) + ".png"))) for x in range(1,4)]
 base_img = pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","base.png")).convert_alpha())
 PORT = 6006
-file_name_prefix = os.environ.get('file_name_prefix', "")
-if(file_name_prefix!=""):
-    print("Loaded environment variable "+file_name_prefix)
-    file_name_prefix+="_"
-
-
-if(len(sys.argv)>1):
-    PORT = int(sys.argv[1])
-print(PORT)
-address = ('localhost', PORT)     # family is deduced to be 'AF_INET'
-listener = Listener(address, authkey=b'secret password')
-conn = listener.accept()
+file_name_prefix = None
+conn = None
+listener = None
 gen = 0
 
 
@@ -388,12 +377,12 @@ def eval_genomes(genomes, config,pickle_file):
             bird.move()
 
             # send bird location, top pipe location and bottom pipe location and determine from network whether to jump or not
-            output = nets[birds.index(bird)].activate((bird.y, abs(bird.y - pipes[pipe_ind].height), abs(bird.y - pipes[pipe_ind].bottom)))
+            # output = nets[birds.index(bird)].activate((bird.y, abs(bird.y - pipes[pipe_ind].height), abs(bird.y - pipes[pipe_ind].bottom)))
             x_distance = abs(pipes[pipe_ind].x - bird.x)
             tp_y_distance = abs(bird.y - pipes[pipe_ind].height)
             bp_y_distance = abs(bird.y - pipes[pipe_ind].bottom)
-            tp_distance = math.sqrt(x_distance*2 + tp_y_distance*2)
-            bp_distance = math.sqrt(x_distance*2 + bp_y_distance*2)
+            tp_distance = math.sqrt(x_distance**2 + tp_y_distance**2)
+            bp_distance = math.sqrt(x_distance**2 + bp_y_distance**2)
             output = nets[birds.index(bird)].activate((bird.y, tp_distance, bp_distance))
 
 
@@ -447,7 +436,7 @@ def eval_genomes(genomes, config,pickle_file):
         # break if score gets large enough
         if (score > 100):
             print(gen,score,ge[0].fitness,gen)
-            path = file_name_prefix+"Verified_Pickles/" + pickle_file
+            path = file_name_prefix+"/"+file_name_prefix+"Verified_Pickles/" + pickle_file
             with open(path, "wb") as f:
                 pickle.dump(ge[0], f)
             trainingResponse([[GAP,SEPERATION,VELOCITY,PIPE_VELOCITY,JUMP_VELOCITY,GRAVITY],pickle_file,score,ge[0].fitness])
@@ -469,7 +458,7 @@ def run(config_file,pickle_file):
                          neat.DefaultSpeciesSet, neat.DefaultStagnation,
                          config_file)
 
-    genome_path = file_name_prefix+'Pickles/'+ pickle_file
+    genome_path = file_name_prefix+"/"+file_name_prefix+'Pickles/'+ pickle_file
     with open(genome_path, "rb") as f:
         genome = pickle.load(f)
     genomes = [(1, genome)]
@@ -533,6 +522,20 @@ if __name__ == '__main__':
     here so that the script will run successfully regardless of the
     current working directory.
     """
-    local_dir = os.path.dirname(__file__)
-    config_path = os.path.join(local_dir, 'config-feedforward.txt')
-    updateValues(config_path)
+    try:
+        file_name_prefix = os.environ.get('file_name_prefix', "")
+        if(file_name_prefix!=""):
+            print("Loaded environment variable "+file_name_prefix)
+            file_name_prefix+="_"
+        if(len(sys.argv)>1):
+            PORT = int(sys.argv[1])
+        print(PORT)
+        address = ('localhost', PORT)     # family is deduced to be 'AF_INET'
+        listener = Listener(address, authkey=b'secret password')
+        conn = listener.accept()
+        local_dir = os.path.dirname(__file__)
+        config_path = os.path.join(local_dir, 'config-feedforward.txt')
+        updateValues(config_path)
+    except Exception as e:
+        print(e)
+        time.sleep(5000)
